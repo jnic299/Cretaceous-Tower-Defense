@@ -1,0 +1,55 @@
+/* Design tokens. One place to retune the whole application's look. */
+:root {
+  /* Surfaces — deep, warm-shadowed jungle night. */
+  --bg-abyss: #070a0c;
+  --bg-deep: #0c1114;
+  --bg-panel: #12191d;
+  --bg-panel-2: #182126;
+  --bg-raised: #1e292f;
+  --bg-hover: #24323a;
+
+  /* Ink */
+  --ink: #e8eef0;
+  --ink-soft: #a9bcc2;
+  --ink-dim: #6f858d;
+  --ink-faint: #465a62;
+
+  /* Brand */
+  --amber: #ffbf47;
+  --amber-deep: #d9902a;
+  --amber-glow: rgba(255, 191, 71, 0.22);
+  --jade: #6fd08c;
+  --jade-deep: #3d9c5f;
+  --cyan: #6fd8e8;
+  --rust: #ff7a5c;
+  --rust-deep: #d64a2e;
+  --violet: #a58ce0;
+
+  /* Tier colours, shared with the canvas */
+  --tier-green: #76c14a;
+  --tier-blue: #4aa3d8;
+  --tier-orange: #e8973a;
+  --tier-red: #d9453f;
+  --tier-obsidian: #8b82a8;
+
+  /* Lines & shadow */
+  --line: rgba(255, 255, 255, 0.08);
+  --line-strong: rgba(255, 255, 255, 0.16);
+  --shadow-1: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --shadow-2: 0 8px 28px rgba(0, 0, 0, 0.5);
+  --shadow-3: 0 18px 60px rgba(0, 0, 0, 0.6);
+
+  /* Type */
+  --font-display: "Arial Narrow", "Roboto Condensed", "Helvetica Neue", Arial, ui-sans-serif, sans-serif;
+  --font-body: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+
+  /* Geometry */
+  --r-sm: 4px;
+  --r-md: 8px;
+  --r-lg: 14px;
+  --r-xl: 22px;
+
+  --hud-top: 56px;
+  --hud-bottom: 128px;
+}

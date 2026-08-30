@@ -1,0 +1,264 @@
+import type { MapDef } from '../../types';
+import { g, wave } from '../waves';
+import { bandPolygon, blobPolygon } from './helpers';
+
+const LAVA_CHANNEL = [
+  { x: 640, y: -40 },
+  { x: 622, y: 140 },
+  { x: 660, y: 292 },
+  { x: 628, y: 430 },
+  { x: 656, y: 560 },
+  { x: 636, y: 760 },
+];
+
+/**
+ * MAP 3 — Caldera Station.
+ * Lava is placement denial first and drama second. It splits the field into
+ * three narrow shelves, so every viable firing position is contested and the
+ * two spawn routes converge at a single land bridge.
+ */
+export const CALDERA_STATION: MapDef = {
+  id: 'calderaStation',
+  name: 'Caldera Station',
+  subtitle: 'Geothermal Tap — Vent Field 9',
+  description:
+    'A geothermal plant built inside an active caldera. Open lava splits the field into narrow shelves, and both approach routes squeeze onto the same land bridge.',
+  theme: 'volcanic',
+  difficulty: 3,
+  unlockCost: 550,
+  starsRequired: 5,
+  width: 1280,
+  height: 720,
+  startingSupply: 330,
+  firstClearAmber: 340,
+  amberPerStar: 95,
+  features: ['Open lava — nothing may be placed in it', 'Narrow land bridges', 'Two routes, one chokepoint'],
+  expectedSpecies: [
+    'compsognathus',
+    'velociraptor',
+    'dilophosaurus',
+    'pachycephalosaurus',
+    'triceratops',
+    'ankylosaurus',
+    'carnotaurus',
+    'tyrannosaurus',
+  ],
+  palette: {
+    ground: 0x3a3238,
+    groundAlt: 0x473c40,
+    groundDeep: 0x241f24,
+    path: 0x6b5b52,
+    pathEdge: 0x4a3d38,
+    foliage: 0x4c3a30,
+    foliageDark: 0x2e231e,
+    accent: 0xff8a3c,
+    fog: 0x1a0c08,
+  },
+  objective: {
+    name: 'Geothermal Tap 9',
+    kind: 'generator',
+    x: 1112,
+    y: 366,
+    radius: 48,
+    hp: 100,
+  },
+  paths: [
+    {
+      id: 'northShelf',
+      width: 32,
+      waypoints: [
+        { x: -50, y: 108 },
+        { x: 236, y: 118 },
+        { x: 380, y: 208 },
+        { x: 522, y: 232 },
+        { x: 640, y: 342 },
+        { x: 764, y: 300 },
+        { x: 880, y: 196 },
+        { x: 1010, y: 236 },
+        { x: 1062, y: 340 },
+      ],
+    },
+    {
+      id: 'southShelf',
+      width: 32,
+      waypoints: [
+        { x: -50, y: 640 },
+        { x: 220, y: 630 },
+        { x: 372, y: 540 },
+        { x: 512, y: 484 },
+        { x: 640, y: 386 },
+        { x: 776, y: 458 },
+        { x: 892, y: 570 },
+        { x: 1032, y: 528 },
+        { x: 1074, y: 402 },
+      ],
+    },
+  ],
+  spawns: [
+    { id: 'northVent', x: -50, y: 108, pathId: 'northShelf', label: 'North Vent' },
+    { id: 'southFissure', x: -50, y: 640, pathId: 'southShelf', label: 'South Fissure' },
+  ],
+  terrain: [
+    { kind: 'lava', polygon: bandPolygon(LAVA_CHANNEL, 66) },
+    { kind: 'lava', polygon: blobPolygon(268, 366, 118, 92, 12, 3) },
+    { kind: 'lava', polygon: blobPolygon(884, 362, 84, 66, 11, 13) },
+    { kind: 'lava', polygon: blobPolygon(474, 96, 96, 58, 11, 23) },
+    { kind: 'lava', polygon: blobPolygon(452, 664, 104, 56, 11, 41) },
+    { kind: 'lava', polygon: blobPolygon(1128, 92, 90, 62, 11, 53) },
+    { kind: 'lava', polygon: blobPolygon(1150, 636, 96, 58, 11, 61) },
+    {
+      kind: 'structure',
+      blocksSight: false,
+      polygon: [
+        { x: 1054, y: 306 },
+        { x: 1176, y: 306 },
+        { x: 1176, y: 428 },
+        { x: 1054, y: 428 },
+      ],
+    },
+    {
+      kind: 'rock',
+      height: 30,
+      blocksSight: true,
+      polygon: [
+        { x: 786, y: 92 },
+        { x: 900, y: 68 },
+        { x: 950, y: 132 },
+        { x: 884, y: 176 },
+        { x: 782, y: 156 },
+      ],
+    },
+    {
+      kind: 'rock',
+      height: 26,
+      blocksSight: true,
+      polygon: [
+        { x: 176, y: 236 },
+        { x: 274, y: 224 },
+        { x: 296, y: 282 },
+        { x: 212, y: 312 },
+        { x: 150, y: 284 },
+      ],
+    },
+    {
+      kind: 'rock',
+      height: 26,
+      blocksSight: true,
+      polygon: [
+        { x: 322, y: 396 },
+        { x: 410, y: 392 },
+        { x: 428, y: 462 },
+        { x: 344, y: 486 },
+        { x: 292, y: 442 },
+      ],
+    },
+  ],
+  decor: [
+    { kind: 'deadTree', x: 132, y: 190, scale: 1.1 },
+    { kind: 'deadTree', x: 340, y: 314, scale: 0.95 },
+    { kind: 'deadTree', x: 172, y: 470, scale: 1.05 },
+    { kind: 'deadTree', x: 566, y: 592, scale: 1 },
+    { kind: 'deadTree', x: 726, y: 640, scale: 1.1 },
+    { kind: 'deadTree', x: 964, y: 106, scale: 1 },
+    { kind: 'deadTree', x: 1226, y: 232, scale: 1.05 },
+    { kind: 'deadTree', x: 1216, y: 508, scale: 1 },
+    { kind: 'deadTree', x: 60, y: 366, scale: 0.9 },
+    { kind: 'boulder', x: 452, y: 320, scale: 1.15 },
+    { kind: 'boulder', x: 552, y: 148, scale: 1 },
+    { kind: 'boulder', x: 706, y: 190, scale: 0.9 },
+    { kind: 'boulder', x: 780, y: 552, scale: 1.1 },
+    { kind: 'boulder', x: 924, y: 452, scale: 0.95 },
+    { kind: 'boulder', x: 296, y: 590, scale: 1 },
+    { kind: 'vent', x: 520, y: 396 },
+    { kind: 'vent', x: 742, y: 386 },
+    { kind: 'vent', x: 620, y: 496 },
+    { kind: 'vent', x: 610, y: 226 },
+    { kind: 'vent', x: 372, y: 664 },
+    { kind: 'vent', x: 986, y: 620 },
+    { kind: 'bone', x: 250, y: 190, rotation: 0.6 },
+    { kind: 'bone', x: 828, y: 480, rotation: -0.35 },
+    { kind: 'crate', x: 1032, y: 268 },
+    { kind: 'barrel', x: 1194, y: 268 },
+    { kind: 'barrel', x: 1210, y: 292, scale: 0.9 },
+    { kind: 'antenna', x: 1114, y: 296, scale: 1.15 },
+    { kind: 'tent', x: 1210, y: 400, scale: 1 },
+    { kind: 'lamp', x: 1030, y: 440 },
+    { kind: 'lamp', x: 1198, y: 452 },
+    { kind: 'fence', x: 1004, y: 316, rotation: 1.5708 },
+    { kind: 'fence', x: 1004, y: 396, rotation: 1.5708 },
+  ],
+  waves: [
+    wave(1, 38, [g('compsognathus', 'blue', 10, 520, 0, 'northVent')], { name: 'Ash Runners' }),
+    wave(2, 42, [
+      g('velociraptor', 'green', 5, 850, 0, 'northVent'),
+      g('velociraptor', 'green', 5, 850, 700, 'southFissure'),
+    ]),
+    wave(3, 48, [
+      g('dilophosaurus', 'blue', 4, 1200, 0, 'southFissure'),
+      g('compsognathus', 'blue', 12, 400, 1200, 'northVent'),
+    ]),
+    wave(4, 56, [
+      g('pachycephalosaurus', 'green', 3, 2000, 0, 'northVent'),
+      g('velociraptor', 'blue', 6, 800, 1600, 'southFissure'),
+    ], { name: 'Battering Rams' }),
+    wave(5, 64, [
+      g('ankylosaurus', 'green', 3, 2400, 0, 'southFissure'),
+      g('dilophosaurus', 'blue', 5, 1100, 2000, 'northVent'),
+    ]),
+    wave(6, 74, [
+      g('triceratops', 'green', 3, 2400, 0, 'northVent'),
+      g('compsognathus', 'orange', 14, 340, 1500, 'southFissure'),
+    ], { name: 'Bulldozers' }),
+    wave(7, 86, [
+      g('carnotaurus', 'green', 3, 2200, 0, 'southFissure'),
+      g('velociraptor', 'orange', 7, 700, 1200, 'northVent'),
+    ]),
+    wave(8, 100, [
+      g('pachycephalosaurus', 'blue', 4, 1700, 0, 'northVent'),
+      g('pachycephalosaurus', 'blue', 4, 1700, 900, 'southFissure'),
+      g('dilophosaurus', 'orange', 5, 1000, 3600, 'northVent'),
+    ], { name: 'Both Shelves' }),
+    wave(9, 114, [
+      g('ankylosaurus', 'orange', 3, 2600, 0, 'southFissure'),
+      g('triceratops', 'blue', 3, 2400, 1400, 'northVent'),
+    ], { name: 'Plated Advance' }),
+    wave(10, 130, [
+      g('carnotaurus', 'blue', 4, 1900, 0, 'northVent'),
+      g('compsognathus', 'orange', 18, 280, 1000, 'southFissure'),
+    ]),
+    wave(11, 148, [
+      g('triceratops', 'orange', 3, 2600, 0, 'southFissure'),
+      g('velociraptor', 'red', 7, 680, 1600, 'northVent'),
+    ], { name: 'Crimson Pack' }),
+    wave(12, 168, [
+      g('ankylosaurus', 'orange', 4, 2200, 0, 'northVent'),
+      g('carnotaurus', 'orange', 3, 2000, 1800, 'southFissure'),
+      g('pachycephalosaurus', 'orange', 5, 1500, 4400, 'northVent'),
+    ]),
+    wave(13, 190, [
+      g('tyrannosaurus', 'green', 1, 0, 0, 'southFissure'),
+      g('compsognathus', 'red', 16, 300, 1500, 'northVent'),
+    ], { name: 'Vanguard' }),
+    wave(14, 214, [
+      g('carnotaurus', 'red', 3, 2200, 0, 'northVent'),
+      g('triceratops', 'orange', 4, 2200, 1200, 'southFissure'),
+      g('dilophosaurus', 'red', 6, 950, 4000, 'northVent'),
+    ], { name: 'Full Caldera' }),
+    wave(15, 240, [
+      g('ankylosaurus', 'red', 4, 2400, 0, 'southFissure'),
+      g('velociraptor', 'red', 10, 560, 1400, 'northVent'),
+      g('pachycephalosaurus', 'red', 4, 1700, 5000, 'southFissure'),
+    ], { name: 'Last Shelf' }),
+    wave(
+      16,
+      420,
+      [
+        g('compsognathus', 'red', 20, 260, 0, 'northVent'),
+        g('carnotaurus', 'red', 4, 1700, 2400, 'southFissure'),
+        g('tyrannosaurus', 'blue', 1, 0, 6500, 'northVent'),
+        g('tyrannosaurus', 'blue', 1, 0, 11000, 'southFissure'),
+      ],
+      { name: 'Twin Apex', boss: true },
+    ),
+  ],
+};

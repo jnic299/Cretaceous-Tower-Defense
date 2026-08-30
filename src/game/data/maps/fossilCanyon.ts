@@ -1,0 +1,307 @@
+import type { MapDef } from '../../types';
+import { g, wave } from '../waves';
+
+/**
+ * MAP 4 — Fossil Canyon.
+ * The line-of-sight map. A central mesa splits the field in two, and spur
+ * walls chop the long lanes into segments. A sniper here covers one corridor
+ * beautifully and cannot see the other one at all.
+ */
+export const FOSSIL_CANYON: MapDef = {
+  id: 'fossilCanyon',
+  name: 'Fossil Canyon',
+  subtitle: 'Bonebed 12 — Relay Mast',
+  description:
+    'Excavation canyon cut into old rock. Solid walls stop every bullet on the roster, so range means nothing without a firing line to use it in.',
+  theme: 'canyon',
+  difficulty: 4,
+  unlockCost: 800,
+  starsRequired: 8,
+  width: 1280,
+  height: 720,
+  startingSupply: 360,
+  firstClearAmber: 420,
+  amberPerStar: 115,
+  features: ['Canyon walls block line of sight', 'Two isolated corridors', 'Long open firing lanes'],
+  expectedSpecies: [
+    'compsognathus',
+    'velociraptor',
+    'dilophosaurus',
+    'pachycephalosaurus',
+    'parasaurolophus',
+    'triceratops',
+    'ankylosaurus',
+    'carnotaurus',
+    'tyrannosaurus',
+  ],
+  palette: {
+    ground: 0x8a6b48,
+    groundAlt: 0x9c7c56,
+    groundDeep: 0x5f4630,
+    path: 0xb59468,
+    pathEdge: 0x7d6041,
+    foliage: 0x6b7a44,
+    foliageDark: 0x4a5630,
+    accent: 0xf0d9a8,
+    fog: 0x241a10,
+  },
+  objective: {
+    name: 'Relay Mast Twelve',
+    kind: 'comms',
+    x: 1128,
+    y: 376,
+    radius: 46,
+    hp: 100,
+  },
+  paths: [
+    {
+      id: 'upperCorridor',
+      width: 32,
+      waypoints: [
+        { x: -50, y: 128 },
+        { x: 232, y: 116 },
+        { x: 418, y: 172 },
+        { x: 646, y: 134 },
+        { x: 858, y: 178 },
+        { x: 1002, y: 258 },
+        { x: 1076, y: 344 },
+      ],
+    },
+    {
+      id: 'lowerCorridor',
+      width: 32,
+      waypoints: [
+        { x: -50, y: 612 },
+        { x: 254, y: 630 },
+        { x: 470, y: 566 },
+        { x: 702, y: 622 },
+        { x: 900, y: 560 },
+        { x: 1022, y: 480 },
+        { x: 1084, y: 412 },
+      ],
+    },
+  ],
+  spawns: [
+    { id: 'upperCut', x: -50, y: 128, pathId: 'upperCorridor', label: 'Upper Cut' },
+    { id: 'lowerWash', x: -50, y: 612, pathId: 'lowerCorridor', label: 'Lower Wash' },
+  ],
+  terrain: [
+    // Central mesa — the reason this map plays differently from every other.
+    {
+      kind: 'rock',
+      height: 52,
+      blocksSight: true,
+      polygon: [
+        { x: 302, y: 252 },
+        { x: 470, y: 220 },
+        { x: 662, y: 232 },
+        { x: 822, y: 268 },
+        { x: 892, y: 330 },
+        { x: 866, y: 428 },
+        { x: 704, y: 486 },
+        { x: 468, y: 500 },
+        { x: 322, y: 452 },
+        { x: 272, y: 352 },
+      ],
+    },
+    // Spur walls chopping the long lanes into segments.
+    {
+      kind: 'rock',
+      height: 34,
+      blocksSight: true,
+      polygon: [
+        { x: 126, y: 246 },
+        { x: 244, y: 232 },
+        { x: 278, y: 322 },
+        { x: 176, y: 356 },
+        { x: 108, y: 314 },
+      ],
+    },
+    {
+      kind: 'rock',
+      height: 34,
+      blocksSight: true,
+      polygon: [
+        { x: 136, y: 430 },
+        { x: 248, y: 418 },
+        { x: 272, y: 508 },
+        { x: 160, y: 532 },
+        { x: 104, y: 480 },
+      ],
+    },
+    {
+      kind: 'rock',
+      height: 38,
+      blocksSight: true,
+      polygon: [
+        { x: 966, y: 96 },
+        { x: 1092, y: 82 },
+        { x: 1148, y: 158 },
+        { x: 1044, y: 212 },
+        { x: 944, y: 176 },
+      ],
+    },
+    {
+      kind: 'rock',
+      height: 38,
+      blocksSight: true,
+      polygon: [
+        { x: 946, y: 596 },
+        { x: 1076, y: 584 },
+        { x: 1128, y: 664 },
+        { x: 1000, y: 700 },
+        { x: 918, y: 660 },
+      ],
+    },
+    {
+      kind: 'rock',
+      height: 30,
+      blocksSight: true,
+      polygon: [
+        { x: 520, y: 34 },
+        { x: 640, y: 22 },
+        { x: 676, y: 76 },
+        { x: 588, y: 106 },
+        { x: 508, y: 84 },
+      ],
+    },
+    {
+      kind: 'rock',
+      height: 30,
+      blocksSight: true,
+      polygon: [
+        { x: 560, y: 666 },
+        { x: 682, y: 656 },
+        { x: 706, y: 706 },
+        { x: 596, y: 726 },
+        { x: 536, y: 704 },
+      ],
+    },
+    {
+      kind: 'structure',
+      blocksSight: false,
+      polygon: [
+        { x: 1074, y: 318 },
+        { x: 1190, y: 318 },
+        { x: 1190, y: 434 },
+        { x: 1074, y: 434 },
+      ],
+    },
+  ],
+  decor: [
+    { kind: 'deadTree', x: 92, y: 190, scale: 1 },
+    { kind: 'deadTree', x: 340, y: 96, scale: 0.95 },
+    { kind: 'deadTree', x: 786, y: 88, scale: 1.05 },
+    { kind: 'deadTree', x: 106, y: 660, scale: 1 },
+    { kind: 'deadTree', x: 380, y: 690, scale: 0.9 },
+    { kind: 'deadTree', x: 828, y: 686, scale: 1 },
+    { kind: 'deadTree', x: 1226, y: 130, scale: 1.05 },
+    { kind: 'deadTree', x: 1236, y: 596, scale: 1 },
+    { kind: 'boulder', x: 316, y: 570, scale: 1.15 },
+    { kind: 'boulder', x: 480, y: 118, scale: 0.95 },
+    { kind: 'boulder', x: 758, y: 552, scale: 1.1 },
+    { kind: 'boulder', x: 902, y: 246, scale: 1 },
+    { kind: 'boulder', x: 210, y: 380, scale: 0.85 },
+    { kind: 'boulder', x: 620, y: 386, scale: 1.2 },
+    { kind: 'boulder', x: 1004, y: 404, scale: 0.9 },
+    { kind: 'bone', x: 420, y: 350, rotation: 0.3 },
+    { kind: 'bone', x: 552, y: 430, rotation: -0.7 },
+    { kind: 'bone', x: 730, y: 340, rotation: 1.1 },
+    { kind: 'bone', x: 878, y: 486, rotation: -0.2 },
+    { kind: 'bone', x: 190, y: 590, rotation: 0.9 },
+    { kind: 'fern', x: 268, y: 176 },
+    { kind: 'fern', x: 916, y: 122 },
+    { kind: 'fern', x: 604, y: 574 },
+    { kind: 'fern', x: 1046, y: 546 },
+    { kind: 'crate', x: 1048, y: 282 },
+    { kind: 'crate', x: 1080, y: 262, scale: 0.85 },
+    { kind: 'barrel', x: 1214, y: 288 },
+    { kind: 'antenna', x: 1132, y: 306, scale: 1.3 },
+    { kind: 'tent', x: 1226, y: 386, scale: 1 },
+    { kind: 'lamp', x: 1052, y: 444 },
+    { kind: 'lamp', x: 1200, y: 458 },
+    { kind: 'fence', x: 1024, y: 330, rotation: 1.5708 },
+    { kind: 'fence', x: 1024, y: 410, rotation: 1.5708 },
+  ],
+  waves: [
+    wave(1, 42, [g('compsognathus', 'blue', 12, 460, 0, 'upperCut')], { name: 'Canyon Scouts' }),
+    wave(2, 46, [
+      g('velociraptor', 'blue', 6, 800, 0, 'upperCut'),
+      g('velociraptor', 'blue', 6, 800, 600, 'lowerWash'),
+    ]),
+    wave(3, 52, [
+      g('dilophosaurus', 'blue', 5, 1100, 0, 'lowerWash'),
+      g('compsognathus', 'orange', 12, 380, 1200, 'upperCut'),
+    ]),
+    wave(4, 60, [
+      g('pachycephalosaurus', 'blue', 4, 1800, 0, 'upperCut'),
+      g('parasaurolophus', 'blue', 4, 1600, 1400, 'lowerWash'),
+    ]),
+    wave(5, 68, [
+      g('ankylosaurus', 'blue', 3, 2400, 0, 'lowerWash'),
+      g('velociraptor', 'orange', 7, 700, 1600, 'upperCut'),
+    ], { name: 'Plated Column' }),
+    wave(6, 78, [
+      g('triceratops', 'blue', 3, 2400, 0, 'upperCut'),
+      g('dilophosaurus', 'orange', 6, 1000, 1600, 'lowerWash'),
+    ]),
+    wave(7, 90, [
+      g('carnotaurus', 'blue', 3, 2100, 0, 'lowerWash'),
+      g('compsognathus', 'orange', 18, 300, 900, 'upperCut'),
+    ], { name: 'Horned Sprint' }),
+    wave(8, 102, [
+      g('pachycephalosaurus', 'orange', 5, 1600, 0, 'upperCut'),
+      g('pachycephalosaurus', 'orange', 5, 1600, 800, 'lowerWash'),
+    ], { name: 'Both Corridors' }),
+    wave(9, 116, [
+      g('ankylosaurus', 'orange', 4, 2200, 0, 'lowerWash'),
+      g('parasaurolophus', 'orange', 5, 1500, 1800, 'upperCut'),
+    ]),
+    wave(10, 132, [
+      g('triceratops', 'orange', 4, 2200, 0, 'upperCut'),
+      g('velociraptor', 'red', 8, 620, 1400, 'lowerWash'),
+    ], { name: 'Crimson Runners' }),
+    wave(11, 148, [
+      g('carnotaurus', 'orange', 4, 1900, 0, 'lowerWash'),
+      g('dilophosaurus', 'red', 6, 950, 1600, 'upperCut'),
+    ]),
+    wave(12, 168, [
+      g('tyrannosaurus', 'green', 1, 0, 0, 'upperCut'),
+      g('compsognathus', 'red', 18, 280, 1400, 'lowerWash'),
+    ], { name: 'Apex Probe' }),
+    wave(13, 188, [
+      g('ankylosaurus', 'red', 4, 2200, 0, 'upperCut'),
+      g('pachycephalosaurus', 'red', 5, 1500, 1600, 'lowerWash'),
+    ], { name: 'Armoured Wall' }),
+    wave(14, 210, [
+      g('triceratops', 'red', 4, 2200, 0, 'lowerWash'),
+      g('carnotaurus', 'red', 4, 1800, 1600, 'upperCut'),
+    ]),
+    wave(15, 236, [
+      g('velociraptor', 'red', 12, 520, 0, 'upperCut'),
+      g('velociraptor', 'red', 12, 520, 600, 'lowerWash'),
+      g('parasaurolophus', 'red', 5, 1500, 4000, 'upperCut'),
+    ], { name: 'Everything At Once' }),
+    wave(16, 264, [
+      g('tyrannosaurus', 'blue', 1, 0, 0, 'lowerWash'),
+      g('ankylosaurus', 'red', 5, 2000, 1200, 'upperCut'),
+      g('compsognathus', 'obsidian', 10, 400, 5000, 'lowerWash'),
+    ], { name: 'Obsidian Sighting' }),
+    wave(17, 300, [
+      g('carnotaurus', 'obsidian', 2, 3000, 0, 'upperCut'),
+      g('triceratops', 'red', 5, 2000, 1400, 'lowerWash'),
+      g('pachycephalosaurus', 'obsidian', 3, 2200, 5200, 'upperCut'),
+    ], { name: 'Black Hide' }),
+    wave(
+      18,
+      600,
+      [
+        g('compsognathus', 'obsidian', 14, 300, 0, 'lowerWash'),
+        g('velociraptor', 'obsidian', 6, 900, 2000, 'upperCut'),
+        g('carnotaurus', 'obsidian', 3, 2200, 5000, 'lowerWash'),
+        g('tyrannosaurus', 'orange', 1, 0, 9000, 'upperCut'),
+      ],
+      { name: 'The Bonebed Alpha', boss: true },
+    ),
+  ],
+};

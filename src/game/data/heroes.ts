@@ -1,0 +1,133 @@
+import type { HeroDef } from '../types';
+
+/**
+ * One hero per match. Heroes out-perform any single defender by a wide
+ * margin, cost a serious chunk of early supply, and can be pulled back and
+ * redeployed on a cooldown when a lane collapses.
+ */
+export const HEROES: HeroDef[] = [
+  {
+    id: 'ironside',
+    name: 'Ironside',
+    title: 'Bulwark Tank Commander',
+    description:
+      'Commander Dessa Voll fights from inside a CTV-9 expeditionary tank. The main gun handles anything heavy; a coaxial gun quietly deletes everything small that gets close.',
+    flavor: 'Has never left the vehicle on an operation. Considers this a personal best.',
+    unlockCost: 0,
+    deployCost: 200,
+    terrain: 'land',
+    footprint: 35,
+    range: 305,
+    damage: 100,
+    fireRate: 0.78,
+    defaultTargeting: 'strongest',
+    attack: {
+      pattern: 'lob',
+      damageType: 'explosive',
+      projectileSpeed: 620,
+      splashRadius: 80,
+      splashFalloff: 0.45,
+      visual: 'shell',
+    },
+    secondary: {
+      range: 155,
+      damage: 8,
+      fireRate: 5,
+      attack: { pattern: 'projectile', damageType: 'kinetic', projectileSpeed: 820, visual: 'bullet' },
+    },
+    ability: {
+      id: 'breachingShell',
+      name: 'Breaching Shell',
+      description: 'Single enormous high-explosive round. Detonates on impact, staggers everything caught in the blast.',
+      cooldownMs: 26000,
+      kind: 'targeted',
+      radius: 138,
+      damage: 560,
+      damageType: 'explosive',
+      stun: { durationMs: 900, chance: 1 },
+      visual: 'breach',
+    },
+    repositionCooldownMs: 12000,
+    art: { body: 0x4c5340, accent: 0xd9a441, metal: 0x8f9691, weapon: 'tank', chassis: 'vehicle', scale: 1.25 },
+    strengths: ['Splash cannon plus an automatic anti-swarm gun', 'Enormous single ability burst', 'Free from the first mission'],
+  },
+
+  {
+    id: 'halcyon',
+    name: 'Halcyon',
+    title: 'Ranger Commander',
+    description:
+      'Captain Imani Sarr runs the perimeter from the highest ground she can find. Her rifle reaches most of the map, and she can call a rotorcraft over any square metre of it.',
+    flavor: 'Files her air support requests before the animals arrive. Has been right every time so far.',
+    unlockCost: 450,
+    deployCost: 175,
+    terrain: 'land',
+    footprint: 24,
+    range: 330,
+    damage: 76,
+    fireRate: 1.15,
+    defaultTargeting: 'strongest',
+    attack: { pattern: 'hitscan', damageType: 'piercing', armorPierce: 0.55, visual: 'rifle' },
+    ability: {
+      id: 'skyhookStrike',
+      name: 'Skyhook Strike',
+      description: 'A rotorcraft makes a strafing pass over the marked area, walking explosive rounds across it.',
+      cooldownMs: 30000,
+      kind: 'targeted',
+      radius: 118,
+      damage: 96,
+      damageType: 'explosive',
+      shots: 9,
+      durationMs: 2600,
+      visual: 'airstrike',
+    },
+    repositionCooldownMs: 9000,
+    art: { body: 0x3f5b45, accent: 0xe8d9a0, metal: 0x767d84, weapon: 'rifle', chassis: 'human', hat: 'cap' },
+    strengths: ['Best sustained single-target damage of the three', 'Ability covers a lane on demand', 'Cheap to redeploy'],
+  },
+
+  {
+    id: 'anvil',
+    name: 'Anvil',
+    title: 'Exo-Frame Pilot',
+    description:
+      'Tobias Kerr wears three tonnes of experimental powered armour. Short reach, colossal close-quarters output, and a ground slam that puts an entire pack on the floor.',
+    flavor: 'The frame was cleared for lifting. The lifting has been reinterpreted.',
+    unlockCost: 600,
+    deployCost: 190,
+    terrain: 'land',
+    footprint: 30,
+    range: 158,
+    damage: 44,
+    fireRate: 2.3,
+    defaultTargeting: 'closest',
+    attack: {
+      pattern: 'projectile',
+      damageType: 'kinetic',
+      projectileSpeed: 740,
+      splashRadius: 44,
+      splashFalloff: 0.5,
+      knockback: 12,
+      visual: 'slug',
+    },
+    ability: {
+      id: 'seismicSlam',
+      name: 'Seismic Slam',
+      description: 'Drives both fists into the ground. Everything in a wide ring is hurled back and left stunned.',
+      cooldownMs: 21000,
+      kind: 'self',
+      radius: 215,
+      damage: 290,
+      damageType: 'kinetic',
+      stun: { durationMs: 1900, chance: 1 },
+      visual: 'slam',
+    },
+    repositionCooldownMs: 8000,
+    art: { body: 0x6a5540, accent: 0xffb347, metal: 0xa9a29a, weapon: 'exo', chassis: 'vehicle', scale: 1.08 },
+    strengths: ['Highest close-range damage in the game', 'Slam resets an overrun chokepoint', 'Shortest ability cooldown'],
+  },
+];
+
+export const HEROES_BY_ID: Record<string, HeroDef> = Object.fromEntries(
+  HEROES.map((h) => [h.id, h]),
+);

@@ -1,0 +1,23 @@
+/** Single source of truth for render ordering inside the match scene. */
+export const DEPTH = {
+  ground: 0,
+  terrainFx: 1,
+  decor: 2,
+  ambient: 3,
+  objective: 4,
+  placementZone: 5,
+  shadow: 8,
+  unitBase: 10,
+  corpse: 11,
+  dino: 14,
+  unitTop: 18,
+  hero: 20,
+  fixture: 12,
+  healthBar: 26,
+  projectile: 30,
+  effect: 34,
+  floatingText: 38,
+  rangeIndicator: 42,
+  ghost: 44,
+  overlay: 48,
+} as const;
