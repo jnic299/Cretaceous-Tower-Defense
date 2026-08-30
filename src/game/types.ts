@@ -442,6 +442,8 @@ export interface MapPalette {
   pathEdge: number;
   foliage: number;
   foliageDark: number;
+  /** Exposed rock and cliff faces. Kept separate so each site reads distinctly. */
+  rock: number;
   accent: number;
   fog: number;
 }
@@ -557,5 +559,7 @@ export interface MatchResult {
   amberBreakdown: { label: string; amount: number }[];
   durationMs: number;
   speciesSeen: SpeciesId[];
+  /** Feeds the codex's lifetime tally. */
+  killsBySpecies: Partial<Record<SpeciesId, number>>;
   newlyUnlockedStars: number;
 }

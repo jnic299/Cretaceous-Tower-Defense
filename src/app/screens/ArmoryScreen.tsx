@@ -75,7 +75,7 @@ export function ArmoryScreen({ onBack }: { onBack: () => void }) {
                   {isFixture ? (
                     <FixtureGlyph def={f} size={92} />
                   ) : (
-                    <UnitEmblem art={isHero ? h.art : d.art} size={96} label={item.name} />
+                    <UnitEmblem art={isHero ? h.art : d.art} size={132} label={item.name} />
                   )}
                   {!owned && <div className="unit-card__scrim" />}
                 </div>

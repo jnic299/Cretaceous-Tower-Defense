@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import type { GameCommand, SelectionInfo } from '../../../game/events';
+import { useProfile } from '../../state/ProfileContext';
 import { findDefender, findFixture, findHero } from '../../../game/data/catalog';
 import { TARGET_MODE_HINTS, TARGET_MODE_LABELS } from '../../../game/systems/targeting';
 import { UnitEmblem } from '../../art/UnitEmblem';
@@ -12,6 +14,12 @@ interface Props {
 }
 
 export function Inspector({ selection, supply, onCommand }: Props) {
+  const { profile } = useProfile();
+  // Stored against the unit, so selecting a different placement implicitly
+  // drops any pending confirmation without an effect.
+  const [confirmFor, setConfirmFor] = useState<string | null>(null);
+  const confirmingSell = confirmFor === selection.unitId;
+
   const def = findDefender(selection.defId);
   const fixture = findFixture(selection.defId);
   const hero = findHero(selection.defId);
@@ -96,8 +104,19 @@ export function Inspector({ selection, supply, onCommand }: Props) {
         )}
 
         {selection.kind !== 'hero' && (
-          <Button variant="ghost" size="sm" block onClick={() => onCommand({ type: 'sell' })}>
-            Sell · refund {selection.sellValue}
+          <Button
+            variant={confirmingSell ? 'danger' : 'ghost'}
+            size="sm"
+            block
+            onClick={() => {
+              if (profile.settings.confirmSell && !confirmingSell) {
+                setConfirmFor(selection.unitId);
+                return;
+              }
+              onCommand({ type: 'sell' });
+            }}
+          >
+            {confirmingSell ? 'Confirm sell' : 'Sell'} · refund {selection.sellValue}
           </Button>
         )}
         {!selection.canAffordUpgrade && selection.upgradeCost !== null && (

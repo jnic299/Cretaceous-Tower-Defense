@@ -85,28 +85,55 @@ function drawPalm(g: Phaser.GameObjects.Graphics, cx: number, cy: number, p: Map
 
 function drawDeadTree(g: Phaser.GameObjects.Graphics, cx: number, cy: number, p: MapPalette, seed: number): void {
   const rand = makeRandom(seed);
-  g.fillStyle(0x000000, 0.2);
-  g.fillEllipse(cx + 4, cy + 5, 40, 28);
-  const trunk = mix(p.foliageDark, 0x50403a, 0.6);
-  g.fillStyle(trunk, 1);
-  g.fillCircle(cx, cy, 7);
-  for (let i = 0; i < 6; i++) {
-    const a = (i / 6) * Math.PI * 2 + rand() * 0.5;
-    const len = 16 + rand() * 12;
+  const trunk = mix(p.foliageDark, 0x6b5748, 0.72);
+  const lit = shade(trunk, 0.3);
+  const dark = shade(trunk, -0.45);
+
+  // Long soft shadow so it reads as something standing up.
+  g.fillStyle(0x000000, 0.26);
+  g.fillEllipse(cx + 10, cy + 9, 46, 26);
+
+  // Four heavy limbs with forks, rather than an even spray of spokes.
+  const limbs = 4;
+  for (let i = 0; i < limbs; i++) {
+    const a = (i / limbs) * Math.PI * 2 + 0.6 + rand() * 0.4;
+    const len = 19 + rand() * 9;
+    const midX = cx + Math.cos(a) * len * 0.6;
+    const midY = cy + Math.sin(a) * len * 0.6;
     poly(
       g,
       ribbon([
-        { x: cx, y: cy, w: 3.4 },
-        { x: cx + Math.cos(a) * len * 0.55, y: cy + Math.sin(a) * len * 0.55, w: 2.1 },
-        { x: cx + Math.cos(a + 0.4) * len, y: cy + Math.sin(a + 0.4) * len, w: 0.8 },
+        { x: cx, y: cy, w: 4.2 },
+        { x: midX, y: midY, w: 2.4 },
+        { x: cx + Math.cos(a + 0.25) * len, y: cy + Math.sin(a + 0.25) * len, w: 0.9 },
       ]),
       trunk,
-      shade(trunk, -0.4),
-      1.2,
+      dark,
+      1.3,
+    );
+    // A single fork off each limb keeps the silhouette tree-like.
+    const forkA = a - 0.55 - rand() * 0.3;
+    poly(
+      g,
+      ribbon([
+        { x: midX, y: midY, w: 1.9 },
+        { x: midX + Math.cos(forkA) * len * 0.5, y: midY + Math.sin(forkA) * len * 0.5, w: 0.7 },
+      ]),
+      trunk,
+      dark,
+      1,
     );
   }
-  g.fillStyle(shade(trunk, 0.25), 1);
-  g.fillCircle(cx - 2, cy - 2, 4);
+
+  // Trunk crown, lit from the upper left.
+  g.fillStyle(trunk, 1);
+  g.fillCircle(cx, cy, 8);
+  g.lineStyle(1.6, dark, 1);
+  g.strokeCircle(cx, cy, 8);
+  g.fillStyle(lit, 1);
+  g.fillCircle(cx - 2.5, cy - 2.5, 4.4);
+  g.fillStyle(dark, 0.8);
+  g.fillCircle(cx + 1.5, cy + 2, 2.2);
 }
 
 function drawFern(g: Phaser.GameObjects.Graphics, cx: number, cy: number, p: MapPalette, seed: number): void {

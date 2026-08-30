@@ -23,6 +23,33 @@ function ownedPlaceables(unlocked: { defenders: string[]; turrets: string[]; fix
   return [...ALL_DEFENDERS, ...FIXTURES].filter((d) => owned.has(d.id));
 }
 
+/**
+ * Picks the opening loadout by taking turns between categories, cheapest
+ * first. Straight catalog order would fill every slot with defenders and
+ * quietly leave a player who owns turrets without one.
+ */
+function suggestLoadout(available: PlaceableDef[], limit: number): string[] {
+  const byCategory: Record<string, PlaceableDef[]> = { defender: [], turret: [], fixture: [] };
+  for (const def of available) byCategory[def.category]?.push(def);
+  for (const list of Object.values(byCategory)) list.sort((a, b) => a.cost - b.cost);
+
+  const order: PlaceableDef['category'][] = ['defender', 'turret', 'defender', 'fixture'];
+  const picked: string[] = [];
+  let guard = 0;
+  while (picked.length < limit && guard++ < 64) {
+    let tookOne = false;
+    for (const category of order) {
+      const next = byCategory[category].shift();
+      if (!next) continue;
+      picked.push(next.id);
+      tookOne = true;
+      if (picked.length >= limit) break;
+    }
+    if (!tookOne) break;
+  }
+  return picked;
+}
+
 export function BriefingScreen({ mapId, challengeId, onBack, onDeploy }: Props) {
   const { profile, selectHero } = useProfile();
   const map = getMap(mapId);
@@ -41,10 +68,7 @@ export function BriefingScreen({ mapId, challengeId, onBack, onDeploy }: Props) 
     heroAllowed ? (ownedHeroes.find((h) => h.id === profile.selectedHeroId)?.id ?? ownedHeroes[0]?.id ?? null) : null,
   );
   const [loadout, setLoadout] = useState<string[]>(() =>
-    available
-      .filter(permitted)
-      .slice(0, MAX_LOADOUT)
-      .map((d) => d.id),
+    suggestLoadout(available.filter(permitted), MAX_LOADOUT),
   );
 
   useEffect(() => {

@@ -4,6 +4,18 @@ import { getSpecies } from '../../game/data/dinosaurs';
 import { getTier } from '../../game/data/tiers';
 import { buildDinoSilhouette } from './svgShapes';
 
+/** Largest body length in the roster, used to size silhouettes against one another. */
+const LONGEST = 118;
+
+/**
+ * Height for a species drawn alongside others, so a Compsognathus never
+ * appears the same size as a Tyrannosaurus.
+ */
+export function silhouetteHeight(species: SpeciesId, max: number, min = max * 0.42): number {
+  const len = getSpecies(species).body.length;
+  return Math.round(min + (max - min) * (len / LONGEST));
+}
+
 interface Props {
   species: SpeciesId;
   tier?: TierId;

@@ -51,6 +51,7 @@ export const CALDERA_STATION: MapDef = {
     pathEdge: 0x4a3d38,
     foliage: 0x4c3a30,
     foliageDark: 0x2e231e,
+    rock: 0x968c81,
     accent: 0xff8a3c,
     fog: 0x1a0c08,
   },

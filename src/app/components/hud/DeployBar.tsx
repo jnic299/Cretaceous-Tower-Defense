@@ -61,7 +61,9 @@ export function DeployBar({ cards, activeId, hint, valid, onCommand }: Props) {
           );
         })}
       </div>
-      {activeId && hint && (
+      {/* The hint also covers hero deployment and repositioning, which have no
+          card on the bar but still need placement feedback. */}
+      {hint && (
         <div className={`deploy__hint ${valid ? 'is-ok' : 'is-bad'}`}>
           {valid ? 'Click to deploy · right-click to cancel' : hint}
         </div>

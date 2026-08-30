@@ -60,6 +60,7 @@ export const DELTA_WETLANDS: MapDef = {
     pathEdge: 0x66563a,
     foliage: 0x37663a,
     foliageDark: 0x22462a,
+    rock: 0x8d9488,
     accent: 0xbfd6c0,
     fog: 0x0d1a1c,
   },

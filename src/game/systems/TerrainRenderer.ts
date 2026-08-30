@@ -164,35 +164,54 @@ function drawStaticTerrain(g: Phaser.GameObjects.Graphics, map: MapDef, geometry
   // ---- Bridges: decking wherever a land route crosses water -------------
   for (const path of geometry.paths) {
     if (path.aquatic) continue;
-    for (let i = 0; i < path.points.length; i++) {
-      const pt = path.points[i];
-      if (!geometry.isInWater(pt.x, pt.y, 2)) continue;
-      const next = path.points[Math.min(path.points.length - 1, i + 1)];
-      const ang = Math.atan2(next.y - pt.y, next.x - pt.x);
-      const w = path.def.width + 6;
-      const nx = -Math.sin(ang) * w;
-      const ny = Math.cos(ang) * w;
-      g.fillStyle(i % 6 < 3 ? 0x8a6b40 : 0x7a5e38, 1);
-      g.fillPoints(
-        [
-          { x: pt.x + nx, y: pt.y + ny },
-          { x: next.x + nx, y: next.y + ny },
-          { x: next.x - nx, y: next.y - ny },
-          { x: pt.x - nx, y: pt.y - ny },
-        ],
-        true,
-      );
-      if (i % 6 === 0) {
-        g.fillStyle(0x5b4327, 0.9);
-        g.fillPoints(
-          [
-            { x: pt.x + nx, y: pt.y + ny },
-            { x: pt.x + nx * 1.16, y: pt.y + ny * 1.16 },
-            { x: pt.x - nx * 1.16, y: pt.y - ny * 1.16 },
-            { x: pt.x - nx, y: pt.y - ny },
-          ],
-          true,
-        );
+    // Collect contiguous runs of route that sit over water, then deck each run
+    // as one continuous span so curves stay solid.
+    const runs: { x: number; y: number }[][] = [];
+    let run: { x: number; y: number }[] = [];
+    for (const pt of path.points) {
+      if (geometry.isInWater(pt.x, pt.y, 2)) {
+        run.push(pt);
+      } else if (run.length > 1) {
+        runs.push(run);
+        run = [];
+      } else {
+        run = [];
+      }
+    }
+    if (run.length > 1) runs.push(run);
+
+    const deckWidth = path.def.width + 7;
+    for (const span of runs) {
+      // Pilings first, so they read as supporting the deck.
+      g.fillStyle(0x4a3620, 0.55);
+      for (let i = 0; i < span.length; i += 8) {
+        g.fillEllipse(span[i].x + 5, span[i].y + 7, deckWidth * 2.1, deckWidth * 1.3);
+      }
+      strokeCorridor(g, span, deckWidth + 3, 0x5b4327, 1);
+      strokeCorridor(g, span, deckWidth, 0x8a6b40, 1);
+      // Plank seams across the deck.
+      g.lineStyle(2, 0x6d5330, 0.85);
+      for (let i = 2; i < span.length - 1; i += 4) {
+        const a = span[i - 1];
+        const b = span[i + 1];
+        const len = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+        const nx = (-(b.y - a.y) / len) * deckWidth;
+        const ny = ((b.x - a.x) / len) * deckWidth;
+        g.lineBetween(span[i].x + nx, span[i].y + ny, span[i].x - nx, span[i].y - ny);
+      }
+      // Handrails.
+      for (const side of [1, -1]) {
+        const rail = span.map((pt, i) => {
+          const a = span[Math.max(0, i - 1)];
+          const b = span[Math.min(span.length - 1, i + 1)];
+          const len = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+          return {
+            x: pt.x + (-(b.y - a.y) / len) * deckWidth * side,
+            y: pt.y + ((b.x - a.x) / len) * deckWidth * side,
+          };
+        });
+        g.lineStyle(3, 0x6d5330, 1);
+        g.strokePoints(rail, false);
       }
     }
   }
@@ -200,38 +219,62 @@ function drawStaticTerrain(g: Phaser.GameObjects.Graphics, map: MapDef, geometry
   // ---- Rock and structures ---------------------------------------------
   for (const region of geometry.solid) {
     const isStructure = region.height === 0;
-    const rock = isStructure ? mix(p.groundDeep, 0x8f969c, 0.6) : mix(p.groundDeep, 0xa89a86, 0.7);
-    const lift = Math.max(6, region.height * 0.5);
+    const rock = isStructure ? mix(p.rock, 0x8f969c, 0.55) : p.rock;
+    const lift = Math.max(8, region.height * 0.55);
+    const bounds = region.bounds;
+    const span = Math.max(bounds.w, bounds.h);
+
     // Cast shadow, offset down-right for a consistent light direction.
     fillPolygon(
       g,
-      region.polygon.map((q) => ({ x: q.x + lift * 0.5, y: q.y + lift * 0.7 })),
+      region.polygon.map((q) => ({ x: q.x + lift * 0.55, y: q.y + lift * 0.8 })),
       0x000000,
-      0.3,
+      0.42,
     );
     // Side wall.
-    fillPolygon(g, region.polygon, shade(rock, -0.42), 1);
+    fillPolygon(g, region.polygon, shade(rock, -0.5), 1);
     // Top face, lifted toward the light.
-    const top = region.polygon.map((q) => ({ x: q.x - lift * 0.18, y: q.y - lift * 0.4 }));
-    poly(g, top, rock, shade(rock, -0.55), 2.5);
+    const top = region.polygon.map((q) => ({ x: q.x - lift * 0.2, y: q.y - lift * 0.45 }));
+    poly(g, top, rock, shade(rock, -0.62), 3);
     const c = polygonCentroid(top);
     fillPolygon(
       g,
-      top.map((q) => ({ x: c.x + (q.x - c.x) * 0.7, y: c.y + (q.y - c.y) * 0.7 })),
-      shade(rock, 0.16),
-      0.75,
+      top.map((q) => ({ x: c.x + (q.x - c.x) * 0.72, y: c.y + (q.y - c.y) * 0.72 })),
+      shade(rock, 0.18),
+      0.8,
     );
+
     if (!isStructure) {
-      for (let i = 0; i < 5; i++) {
+      // Surface detail: fissures and loose rubble, scaled to the outcrop, so a
+      // large mesa does not read as one flat shape.
+      const cracks = Math.max(4, Math.round(span / 90));
+      for (let i = 0; i < cracks; i++) {
         const a = rand() * Math.PI * 2;
-        const r = rand() * 0.55;
-        g.lineStyle(1.8, shade(rock, -0.3), 0.5);
-        g.lineBetween(
-          c.x + Math.cos(a) * r * 60,
-          c.y + Math.sin(a) * r * 40,
-          c.x + Math.cos(a + 0.7) * (r + 0.3) * 60,
-          c.y + Math.sin(a + 0.7) * (r + 0.3) * 40,
-        );
+        const r = 0.15 + rand() * 0.5;
+        let x = c.x + Math.cos(a) * r * bounds.w * 0.45;
+        let y = c.y + Math.sin(a) * r * bounds.h * 0.45;
+        g.lineStyle(2.2, shade(rock, -0.34), 0.55);
+        g.beginPath();
+        g.moveTo(x, y);
+        for (let seg = 0; seg < 3; seg++) {
+          x += Math.cos(a + (seg % 2 ? 0.8 : -0.6)) * (14 + rand() * span * 0.06);
+          y += Math.sin(a + (seg % 2 ? 0.8 : -0.6)) * (10 + rand() * span * 0.05);
+          g.lineTo(x, y);
+        }
+        g.strokePath();
+      }
+      const rubble = Math.max(5, Math.round(span / 40));
+      for (let i = 0; i < rubble; i++) {
+        const a = rand() * Math.PI * 2;
+        const r = rand() * 0.62;
+        const x = c.x + Math.cos(a) * r * bounds.w * 0.5;
+        const y = c.y + Math.sin(a) * r * bounds.h * 0.5;
+        if (!pointInPolygon(x, y, top)) continue;
+        const size = 3 + rand() * 7;
+        g.fillStyle(shade(rock, -0.22), 0.85);
+        g.fillEllipse(x + 1.5, y + 2, size * 2, size * 1.5);
+        g.fillStyle(shade(rock, 0.28), 0.9);
+        g.fillEllipse(x, y, size * 1.8, size * 1.3);
       }
     }
   }

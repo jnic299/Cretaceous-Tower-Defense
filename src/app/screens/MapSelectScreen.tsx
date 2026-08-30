@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { getSpecies } from '../../game/data/dinosaurs';
 import type { MapDef } from '../../game/types';
 import { MapPreview } from '../art/MapPreview';
-import { DinoSilhouette } from '../art/DinoSilhouette';
+import { DinoSilhouette, silhouetteHeight } from '../art/DinoSilhouette';
 import { AmberBadge, Button, Chip, Modal, Stars } from '../components/Ui';
 import { useProfile } from '../state/ProfileContext';
 import { mapAvailability, totalStars } from '../../progression/profile';
@@ -85,7 +85,12 @@ export function MapSelectScreen({ onBack, onSelect }: Props) {
                   <div className="map-card__species">
                     {map.expectedSpecies.slice(0, 6).map((s) => (
                       <span key={s} className="species-pip" title={getSpecies(s).name}>
-                        <DinoSilhouette species={s} tier="green" height={22} unknown={!profile.codex.seen.includes(s)} />
+                        <DinoSilhouette
+                          species={s}
+                          tier="green"
+                          height={silhouetteHeight(s, 30)}
+                          unknown={!profile.codex.seen.includes(s)}
+                        />
                       </span>
                     ))}
                   </div>

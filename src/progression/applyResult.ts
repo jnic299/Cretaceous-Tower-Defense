@@ -59,6 +59,10 @@ export function applyMatchResult(
   const seen = new Set(profile.codex.seen);
   const kills = { ...profile.codex.kills };
   for (const species of result.speciesSeen) seen.add(species);
+  for (const [species, count] of Object.entries(result.killsBySpecies ?? {})) {
+    const id = species as keyof typeof kills;
+    kills[id] = (kills[id] ?? 0) + (count ?? 0);
+  }
 
   const next: PlayerProfile = {
     ...profile,

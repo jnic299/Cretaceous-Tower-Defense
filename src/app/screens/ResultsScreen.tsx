@@ -4,7 +4,7 @@ import { getMap } from '../../game/data/maps';
 import { CHALLENGES_BY_ID } from '../../game/data/challenges';
 import { STAR_THRESHOLDS } from '../../progression/rewards';
 import { AmberBadge, Button, Panel, Stars, Stat } from '../components/Ui';
-import { DinoSilhouette } from '../art/DinoSilhouette';
+import { DinoSilhouette, silhouetteHeight } from '../art/DinoSilhouette';
 import { audioManager } from '../../audio/AudioManager';
 
 interface Props {
@@ -96,7 +96,7 @@ export function ResultsScreen({ result, onReplay, onArmory, onContinue }: Props)
             <div className="results__species-grid">
               {result.speciesSeen.map((s) => (
                 <div key={s} className="results__species-item">
-                  <DinoSilhouette species={s} tier="green" height={40} />
+                  <DinoSilhouette species={s} tier="green" height={silhouetteHeight(s, 56)} />
                   <span>{s}</span>
                 </div>
               ))}

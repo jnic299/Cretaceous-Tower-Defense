@@ -23,6 +23,7 @@ function result(over: Partial<MatchResult> = {}): MatchResult {
     amberBreakdown: [],
     durationMs: 600_000,
     speciesSeen: ['compsognathus', 'velociraptor'],
+    killsBySpecies: { compsognathus: 120, velociraptor: 60 },
     newlyUnlockedStars: 0,
     ...over,
   };
@@ -130,6 +131,15 @@ describe('applyMatchResult', () => {
     expect(next.stats.wins).toBe(1);
     expect(next.stats.kills).toBe(180);
     expect(next.codex.seen).toContain('velociraptor');
+    expect(next.codex.kills.compsognathus).toBe(120);
+  });
+
+  it('accumulates codex kills across runs', () => {
+    let profile = createProfile();
+    profile = applyMatchResult(profile, result(), RESEARCH_OUTPOST).profile;
+    profile = applyMatchResult(profile, result(), RESEARCH_OUTPOST).profile;
+    expect(profile.codex.kills.compsognathus).toBe(240);
+    expect(profile.codex.kills.velociraptor).toBe(120);
   });
 
   it('never lowers a best rating on a worse replay', () => {

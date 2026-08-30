@@ -3,7 +3,7 @@ import { SPECIES, SPECIES_ORDER } from '../../game/data/dinosaurs';
 import { TIERS, TIER_ORDER } from '../../game/data/tiers';
 import type { SpeciesId } from '../../game/types';
 import { scaledHp } from '../../game/systems/combatMath';
-import { DinoSilhouette } from '../art/DinoSilhouette';
+import { DinoSilhouette, silhouetteHeight } from '../art/DinoSilhouette';
 import { Button, Chip, Panel, Stat } from '../components/Ui';
 import { useProfile } from '../state/ProfileContext';
 
@@ -40,8 +40,11 @@ export function CodexScreen({ onBack }: { onBack: () => void }) {
                 className={`codex__entry ${selected === id ? 'is-active' : ''} ${isKnown ? '' : 'is-unknown'}`}
                 onClick={() => setSelected(id)}
               >
-                <DinoSilhouette species={id} tier="green" height={34} unknown={!isKnown} />
+                <DinoSilhouette species={id} tier="green" height={silhouetteHeight(id, 42)} unknown={!isKnown} />
                 <span className="codex__entry-name">{isKnown ? s.name : '— Unidentified —'}</span>
+                {isKnown && (profile.codex.kills[id] ?? 0) > 0 && (
+                  <span className="codex__entry-kills">{profile.codex.kills[id]}</span>
+                )}
               </button>
             );
           })}
@@ -65,6 +68,7 @@ export function CodexScreen({ onBack }: { onBack: () => void }) {
                   <Stat label="Armour" value={def.armor} />
                   <Stat label="Objective damage" value={def.objectiveDamage} />
                   <Stat label="Supply value" value={def.bounty} />
+                  <Stat label="Confirmed kills" value={(profile.codex.kills[selected] ?? 0).toLocaleString()} />
                 </div>
 
                 <div className="codex__trait">
@@ -79,7 +83,7 @@ export function CodexScreen({ onBack }: { onBack: () => void }) {
                       const tier = TIERS[t];
                       return (
                         <div key={t} className="tier-card" style={{ borderColor: tier.cssColor }}>
-                          <DinoSilhouette species={selected} tier={t} height={40} />
+                          <DinoSilhouette species={selected} tier={t} height={44} />
                           <span className="tier-card__name" style={{ color: tier.cssColor }}>
                             {tier.name}
                           </span>
@@ -96,10 +100,16 @@ export function CodexScreen({ onBack }: { onBack: () => void }) {
                 </div>
               </>
             ) : (
-              <p className="muted">
-                No confirmed sighting. Survey teams have reported tracks, noise and — in one case — a
-                strongly worded resignation letter.
-              </p>
+              <div className="codex__unknown">
+                <p className="muted">
+                  No confirmed sighting. Survey teams have reported tracks, noise and — in one case —
+                  a strongly worded resignation letter.
+                </p>
+                <ul>
+                  <li>Encounter this species in the field to fill in its entry.</li>
+                  <li>Durability tiers, behaviour and Supply value will be recorded automatically.</li>
+                </ul>
+              </div>
             )}
           </Panel>
         </div>

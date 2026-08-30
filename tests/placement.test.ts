@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MapGeometry } from '../src/game/systems/MapGeometry';
 import { evaluatePlacement, snapToGrid } from '../src/game/systems/placementRules';
-import { RESEARCH_OUTPOST, DELTA_WETLANDS, CALDERA_STATION } from '../src/game/data/maps';
+import { RESEARCH_OUTPOST, DELTA_WETLANDS, CALDERA_STATION, FOSSIL_CANYON } from '../src/game/data/maps';
 
 const outpost = new MapGeometry(RESEARCH_OUTPOST);
 const wetlands = new MapGeometry(DELTA_WETLANDS);
@@ -135,6 +135,26 @@ describe('placement rules — lava', () => {
   it('still allows the shelves beside the lava', () => {
     const v = evaluatePlacement(caldera, { ...base, x: 700, y: 120 }, []);
     expect(v.ok).toBe(true);
+  });
+});
+
+describe('placement rules — Fossil Canyon', () => {
+  const canyon = new MapGeometry(FOSSIL_CANYON);
+  const verdictAt = (x: number, y: number) =>
+    evaluatePlacement(canyon, { ...base, x, y }, []).reason;
+
+  it('rejects the central mesa', () => {
+    expect(verdictAt(580, 360)).toBe('blocked');
+  });
+
+  it('accepts the ground between the corridors', () => {
+    expect(verdictAt(640, 520)).toBe('ok');
+    expect(verdictAt(300, 60)).toBe('ok');
+    expect(verdictAt(980, 380)).toBe('ok');
+  });
+
+  it('still refuses the corridors themselves', () => {
+    expect(verdictAt(560, 545)).toBe('onPath');
   });
 });
 

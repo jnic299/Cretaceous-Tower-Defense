@@ -96,6 +96,7 @@ export class MatchScene extends Phaser.Scene {
   private paused = false;
   private ended = false;
   private speciesSeen = new Set<SpeciesId>();
+  private killsBySpecies = new Map<SpeciesId, number>();
 
   private activeCardId: string | null = null;
   private ghost?: Phaser.GameObjects.Image;
@@ -147,6 +148,7 @@ export class MatchScene extends Phaser.Scene {
     this.abilityArmed = false;
     this.tutorialStep = 0;
     this.speciesSeen = new Set();
+    this.killsBySpecies = new Map();
   }
 
   /* ------------------------------------------------------------------ */
@@ -453,6 +455,7 @@ export class MatchScene extends Phaser.Scene {
   private handleKill(dino: Dino, source: PlacedUnit | null): void {
     void source;
     this.kills += 1;
+    this.killsBySpecies.set(dino.speciesId, (this.killsBySpecies.get(dino.speciesId) ?? 0) + 1);
     this.economy.add(dino.bounty);
     if (dino.isBoss) this.bossesDefeated += 1;
     if (this.config.tutorial && this.kills === 1) this.advanceTutorial('firstKill');
@@ -1054,12 +1057,13 @@ export class MatchScene extends Phaser.Scene {
     const obj = this.map.objective;
     const pct = this.objectiveHp / this.objectiveHpMax;
     const ov = this.overlayGfx;
+    const ring = obj.radius + 46;
     ov.clear();
-    ov.lineStyle(6, 0x0b0f12, 0.55);
-    ov.strokeCircle(obj.x, obj.y, obj.radius + 24);
+    ov.lineStyle(7, 0x0b0f12, 0.5);
+    ov.strokeCircle(obj.x, obj.y, ring);
     ov.lineStyle(5, pct > 0.5 ? 0x8de89a : pct > 0.25 ? 0xffd75e : 0xff5c48, 0.95);
     ov.beginPath();
-    ov.arc(obj.x, obj.y, obj.radius + 24, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * pct);
+    ov.arc(obj.x, obj.y, ring, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * pct);
     ov.strokePath();
   }
 
@@ -1284,6 +1288,7 @@ export class MatchScene extends Phaser.Scene {
       amberBreakdown: [],
       durationMs: this.elapsed,
       speciesSeen: [...this.speciesSeen],
+      killsBySpecies: Object.fromEntries(this.killsBySpecies),
       newlyUnlockedStars: 0,
     };
 

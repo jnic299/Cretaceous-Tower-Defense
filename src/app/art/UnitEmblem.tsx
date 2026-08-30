@@ -206,9 +206,9 @@ export function UnitEmblem({ art, size = 92, className, label }: Props) {
   return (
     <svg
       className={className}
-      viewBox="-46 -46 92 92"
+      viewBox="-38 -34 88 70"
       width={size}
-      height={size}
+      height={Math.round(size * (70 / 88))}
       role="img"
       aria-label={label ?? 'Unit'}
       style={{ overflow: 'visible' }}

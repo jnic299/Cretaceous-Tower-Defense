@@ -35,15 +35,18 @@ export const FOSSIL_CANYON: MapDef = {
     'tyrannosaurus',
   ],
   palette: {
-    ground: 0x8a6b48,
-    groundAlt: 0x9c7c56,
-    groundDeep: 0x5f4630,
-    path: 0xb59468,
-    pathEdge: 0x7d6041,
-    foliage: 0x6b7a44,
-    foliageDark: 0x4a5630,
+    // Deep oxidised rock underfoot, pale sand on the travelled routes, and a
+    // lighter sandstone for the cliffs, so the layout reads at a glance.
+    ground: 0x6f4632,
+    groundAlt: 0x84573c,
+    groundDeep: 0x3d2419,
+    path: 0xd9bd8c,
+    pathEdge: 0x8f6f47,
+    foliage: 0x6f7a42,
+    foliageDark: 0x3f4a26,
+    rock: 0xc0a077,
     accent: 0xf0d9a8,
-    fog: 0x241a10,
+    fog: 0x1c120b,
   },
   objective: {
     name: 'Relay Mast Twelve',

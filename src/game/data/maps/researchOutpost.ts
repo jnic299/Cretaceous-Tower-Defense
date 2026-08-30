@@ -31,6 +31,7 @@ export const RESEARCH_OUTPOST: MapDef = {
     pathEdge: 0x5d4e35,
     foliage: 0x2f5a2c,
     foliageDark: 0x1e3d1e,
+    rock: 0x9b9384,
     accent: 0xd7c98a,
     fog: 0x0e1a12,
   },
