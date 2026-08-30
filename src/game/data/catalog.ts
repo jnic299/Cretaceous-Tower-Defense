@@ -38,10 +38,6 @@ export function isFixture(def: PlaceableDef): def is FixtureDef {
   return def.category === 'fixture';
 }
 
-export function isDefender(def: PlaceableDef): def is DefenderDef {
-  return def.category === 'defender' || def.category === 'turret';
-}
-
 /** Everything a brand-new profile owns. */
 export const STARTING_UNLOCKS = {
   defenders: ['ranger'] as string[],

@@ -59,8 +59,14 @@ survives a page refresh.
 - Save migration (v1 → v2) with defensive normalisation
 
 **Testing**
-- 181 unit tests, including a data-integrity suite over the balance tables
-- Browser verification with Playwright: full playthroughs, terrain rule checks
+- 182 unit tests, including a data-integrity suite over the balance tables
+- Browser verification with Playwright against the production build:
+  - **22/22 acceptance checks on a fresh profile** — title through to a first
+    clear of Research Outpost with only the starting Ranger and Sentry Turret,
+    an Armory unlock with the Amber earned, and progression intact after a
+    reload, with zero console errors
+  - **11/11 terrain rule checks** — water, lava and line-of-sight behaving in
+    the running game exactly as they do in the unit tests
 
 ---
 
@@ -162,11 +168,30 @@ shape — the level is losable and the win is earned.
 Deliberately out of scope for V1, in rough priority order:
 
 1. A fifth map and a second boss species per site
-3. Endless / survival mode reusing the existing wave builder
-4. Per-defender upgrade *branches* rather than a single three-step line
-5. Cosmetic unlocks
-6. Cloud saves — the repository interface is already the seam for this
-7. Tablet layout and touch input
+2. Endless / survival mode reusing the existing wave builder
+3. Per-defender upgrade *branches* rather than a single three-step line
+4. Cosmetic unlocks
+5. Cloud saves — the repository interface is already the seam for this
+6. Tablet layout and touch input
+
+---
+
+## Verified end to end
+
+Driving the production build in a browser, from an empty save:
+
+| Step | Result |
+| --- | --- |
+| Fresh profile → first clear of Research Outpost | Perimeter Held, 2 stars |
+| Kit available | Ranger and Sentry Turret only |
+| Placements / upgrades / hero abilities used | 13 / 15 / 7 |
+| Species met | 6, including the Tyrannosaurus boss on wave 12 |
+| Amber earned, then spent | 383 → Spike Gunner unlocked → 123 remaining |
+| After a page reload | Amber, stars and unlocks all intact |
+| Console errors | 0 |
+
+A deliberately thin six-unit board on the same map reaches the boss wave and
+loses, which is the intended shape: the level is losable, and the win is earned.
 
 ---
 
@@ -174,7 +199,7 @@ Deliberately out of scope for V1, in rough priority order:
 
 **v1.0 — initial release**
 - Complete game: four maps, ten species, twenty placeables, three heroes,
-  six challenges, full progression, 181 tests.
+  six challenges, full progression, 182 tests.
 - Fixed during verification:
   - River Patrol could not deploy onto the water lane it exists to cover;
     water units are now exempt from the aquatic route restriction only.
@@ -190,3 +215,7 @@ Deliberately out of scope for V1, in rough priority order:
     shadow; palettes now carry an explicit stone colour per site.
   - Bridge decking fanned apart on curves; spans are now decked as continuous
     runs with plank seams and handrails.
+  - The "show range on hover" setting was persisted but did nothing; hovering
+    a placement now previews its reach.
+  - Removed dead code found in the final pass: unused beam bookkeeping in the
+    effects system, an uncalled combat hook, and three unreferenced helpers.

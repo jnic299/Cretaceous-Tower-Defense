@@ -55,13 +55,3 @@ export function blobPolygon(
   }
   return out;
 }
-
-/** Axis-aligned rectangle as a polygon. */
-export function rectPolygon(x: number, y: number, w: number, h: number): Polygon {
-  return [
-    { x, y },
-    { x: x + w, y },
-    { x: x + w, y: y + h },
-    { x, y: y + h },
-  ];
-}

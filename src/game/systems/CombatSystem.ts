@@ -46,7 +46,6 @@ export interface DamageOptions {
 
 export interface CombatHooks {
   onKill(dino: Dino, source: PlacedUnit | null): void;
-  onObjectiveThreat(): void;
 }
 
 export interface CombatDeps {

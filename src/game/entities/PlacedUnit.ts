@@ -118,8 +118,6 @@ export abstract class PlacedUnit {
 export class DefenderUnit extends PlacedUnit {
   readonly def: DefenderDef;
   targetMode: TargetMode;
-  /** Sustained-fire units (Fred) hold a target between ticks. */
-  sustainedUntil = 0;
 
   constructor(scene: Phaser.Scene, id: string, def: DefenderDef, x: number, y: number) {
     super(scene, id, def.id, x, y);

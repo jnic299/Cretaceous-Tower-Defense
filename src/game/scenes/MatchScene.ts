@@ -106,6 +106,7 @@ export class MatchScene extends Phaser.Scene {
   private abilityArmed = false;
 
   private selected: DefenderUnit | FixtureUnit | HeroUnit | null = null;
+  private hovered: DefenderUnit | FixtureUnit | HeroUnit | null = null;
   private selectionRing?: Phaser.GameObjects.Image;
   private selectionRange?: Phaser.GameObjects.Graphics;
 
@@ -180,10 +181,7 @@ export class MatchScene extends Phaser.Scene {
       grid: this.grid,
       effects: this.effects,
       audio: audioManager,
-      hooks: {
-        onKill: (dino, source) => this.handleKill(dino, source),
-        onObjectiveThreat: () => {},
-      },
+      hooks: { onKill: (dino, source) => this.handleKill(dino, source) },
     });
     this.projectiles = new ProjectileSystem(this, this.grid, this.combat);
     this.combat.attachProjectiles(this.projectiles);
@@ -238,6 +236,7 @@ export class MatchScene extends Phaser.Scene {
     this.input.on(Phaser.Input.Events.POINTER_MOVE, (pointer: Phaser.Input.Pointer) => {
       this.pointerWorld.set(pointer.worldX, pointer.worldY);
       this.updateGhost();
+      this.hovered = this.activeCardId ? null : this.unitAt(pointer.worldX, pointer.worldY);
     });
 
     this.input.on(Phaser.Input.Events.POINTER_DOWN, (pointer: Phaser.Input.Pointer) => {
@@ -295,7 +294,6 @@ export class MatchScene extends Phaser.Scene {
       this.updatePhase(dt);
     }
 
-    this.effects.update(time);
     this.drawBars();
     this.drawSelection();
 
@@ -687,7 +685,8 @@ export class MatchScene extends Phaser.Scene {
   /* Selection                                                           */
   /* ------------------------------------------------------------------ */
 
-  private selectAt(x: number, y: number): void {
+  /** Nearest placement under a world point, or null. */
+  private unitAt(x: number, y: number): DefenderUnit | FixtureUnit | HeroUnit | null {
     const candidates: { unit: DefenderUnit | FixtureUnit | HeroUnit; radius: number }[] = [];
     for (const u of this.defenders) candidates.push({ unit: u, radius: u.def.footprint });
     for (const f of this.fixtures) candidates.push({ unit: f, radius: f.def.footprint });
@@ -702,7 +701,11 @@ export class MatchScene extends Phaser.Scene {
         best = c.unit;
       }
     }
+    return best;
+  }
 
+  private selectAt(x: number, y: number): void {
+    const best = this.unitAt(x, y);
     if (best) {
       this.selected = best;
       audioManager.play('uiClick', { volume: 0.35 });
@@ -713,6 +716,7 @@ export class MatchScene extends Phaser.Scene {
 
   private clearSelection(): void {
     this.selected = null;
+    this.hovered = null;
     this.selectionRing?.setVisible(false);
     this.selectionRange?.clear();
   }
@@ -723,6 +727,15 @@ export class MatchScene extends Phaser.Scene {
     const sel = this.selected;
     if (!sel) {
       this.selectionRing?.setVisible(false);
+      // Preview the reach of whatever the cursor is over, if enabled.
+      const hov = this.hovered;
+      if (hov && this.config.settings.showRangeOnHover) {
+        const r = hov instanceof FixtureUnit ? hov.def.radius : hov.effectiveRange;
+        g.fillStyle(0xffe9a8, 0.05);
+        g.fillCircle(hov.x, hov.y, r);
+        g.lineStyle(1.5, 0xffe9a8, 0.45);
+        g.strokeCircle(hov.x, hov.y, r);
+      }
       return;
     }
 

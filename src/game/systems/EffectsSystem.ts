@@ -25,9 +25,6 @@ export class EffectsSystem {
   private flames!: Phaser.GameObjects.Particles.ParticleEmitter;
   private chunks!: Phaser.GameObjects.Particles.ParticleEmitter;
   private frost!: Phaser.GameObjects.Particles.ParticleEmitter;
-  private beams!: Phaser.GameObjects.Graphics;
-  private beamFade: { g: Phaser.GameObjects.Graphics; until: number }[] = [];
-
   showDamageNumbers = true;
   screenShake = true;
 
@@ -82,7 +79,6 @@ export class EffectsSystem {
     for (const e of [this.sparks, this.smoke, this.dust, this.flames, this.chunks, this.frost]) {
       e.setDepth(DEPTH.effect);
     }
-    this.beams = scene.add.graphics().setDepth(DEPTH.effect);
   }
 
   /* ---- Weapons ------------------------------------------------------ */
@@ -363,17 +359,7 @@ export class EffectsSystem {
     cam.flash(ms, r, g, b, false, undefined, alpha);
   }
 
-  update(now: number): void {
-    for (let i = this.beamFade.length - 1; i >= 0; i--) {
-      if (now > this.beamFade[i].until) {
-        this.beamFade[i].g.destroy();
-        this.beamFade.splice(i, 1);
-      }
-    }
-  }
-
   destroy(): void {
-    this.beams.destroy();
     for (const t of [...this.textPool, ...this.activeText]) t.destroy();
     this.textPool = [];
     this.activeText = [];

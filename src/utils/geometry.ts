@@ -46,16 +46,6 @@ export function distanceToSegment(
   return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
 }
 
-/** Shortest distance from a point to an open polyline. */
-export function distanceToPolyline(px: number, py: number, points: Vec2[]): number {
-  let best = Infinity;
-  for (let i = 0; i < points.length - 1; i++) {
-    const d = distanceToSegment(px, py, points[i].x, points[i].y, points[i + 1].x, points[i + 1].y);
-    if (d < best) best = d;
-  }
-  return best;
-}
-
 /** Shortest distance from a point to a polygon's outline (ignores interior). */
 export function distanceToPolygonEdge(px: number, py: number, poly: Polygon): number {
   let best = Infinity;
