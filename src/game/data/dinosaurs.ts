@@ -58,7 +58,7 @@ export const SPECIES: Record<SpeciesId, SpeciesDef> = {
     traits: ['pack', 'sprint'],
     sprintMultiplier: 1.75,
     sprintDurationMs: 900,
-    sprintIntervalMs: 3800,
+    sprintIntervalMs: 5200,
     body: {
       length: 42,
       bodyWidth: 12,
@@ -101,7 +101,7 @@ export const SPECIES: Record<SpeciesId, SpeciesDef> = {
     traits: ['sprint'],
     sprintMultiplier: 2.1,
     sprintDurationMs: 700,
-    sprintIntervalMs: 5200,
+    sprintIntervalMs: 6800,
     body: {
       length: 52,
       bodyWidth: 14,
@@ -184,7 +184,7 @@ export const SPECIES: Record<SpeciesId, SpeciesDef> = {
     traits: ['sprint', 'steadfast'],
     sprintMultiplier: 2.4,
     sprintDurationMs: 1100,
-    sprintIntervalMs: 6000,
+    sprintIntervalMs: 7600,
     body: {
       length: 58,
       bodyWidth: 20,
@@ -307,7 +307,7 @@ export const SPECIES: Record<SpeciesId, SpeciesDef> = {
     traits: ['sprint', 'rally'],
     sprintMultiplier: 1.85,
     sprintDurationMs: 1400,
-    sprintIntervalMs: 4600,
+    sprintIntervalMs: 6400,
     body: {
       length: 84,
       bodyWidth: 24,

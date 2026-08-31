@@ -61,7 +61,7 @@ survives a page refresh.
 **Testing**
 - 199 written `it()` declarations, executing as 229 cases (`tests/dataIntegrity`
   parameterises 10 of them over the four maps). Run `npm test` to reproduce.
-- A committed Playwright smoke suite: 10 browser tests, `npm run test:e2e`
+- A committed Playwright smoke suite: 11 browser tests, `npm run test:e2e`
 
 ---
 
@@ -230,6 +230,36 @@ rather than a reaction to two bot runs.
 ---
 
 ## Changelog
+
+**v1.1.1 — reported-issue fixes**
+
+- **Deployment tooltips were clipped at the screen edge.** The bubble is
+  centred on its trigger, so the leftmost card's tooltip ran past the left
+  edge of `.app`, which clips overflow — it rendered as a chopped-off panel
+  with the unit's name cut in half. Tooltips now measure themselves after
+  layout and shift back inside the viewport, on either edge. Covered by a
+  browser test.
+- **Sprint bursts were near-constant on Delta Wetlands.** Investigated with
+  in-game telemetry: the observed rate matched the data exactly, so the sprint
+  code was not at fault. Two things stacked up. Delta fields three waves
+  (7, 10 and 13) composed almost entirely of sprinting species across two
+  lanes, so nearly every visible animal was lurching; and the v1.1 timing fix
+  restored the true sprint cadence at 2x and 3x, where it had previously
+  fired at half or a third of its intended rate. Sprint *intervals* were
+  lengthened by roughly a third — magnitudes and durations are untouched, so
+  each burst still reads as a real lunge:
+
+  | Species | Duty before | Duty after |
+  | --- | --- | --- |
+  | Velociraptor | 23.7% | 17.3% |
+  | Dilophosaurus | 13.5% | 10.3% |
+  | Pachycephalosaurus | 18.3% | 14.5% |
+  | Carnotaurus | 30.4% | 21.9% |
+
+  On Delta's worst waves that takes the expected number of simultaneously
+  sprinting animals from about 2.8 to about 2.1. Wave composition was left
+  alone; if those three waves still read as too twitchy, diversifying them is
+  the next lever rather than cutting sprint further.
 
 **v1.1 — integrity hardening**
 

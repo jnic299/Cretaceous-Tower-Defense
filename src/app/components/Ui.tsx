@@ -1,4 +1,11 @@
-import { useEffect, useState, type ButtonHTMLAttributes, type ReactNode } from 'react';
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ButtonHTMLAttributes,
+  type ReactNode,
+} from 'react';
 import { audioManager } from '../../audio/AudioManager';
 
 type Variant = 'default' | 'primary' | 'danger' | 'ghost';
@@ -135,8 +142,31 @@ export function Stat({ label, value }: { label: ReactNode; value: ReactNode }) {
   );
 }
 
+/** Keeps a tooltip fully on screen; 10px of breathing room at the edges. */
+const TOOLTIP_MARGIN = 10;
+
 export function Tooltip({ content, children }: { content: ReactNode; children: ReactNode }) {
   const [open, setOpen] = useState(false);
+  const bubbleRef = useRef<HTMLSpanElement>(null);
+
+  // The bubble is centred on its trigger, which pushes it off screen for
+  // anything near an edge — the first deployment card, for instance. The app
+  // clips overflow, so that reads as a chopped-off panel. Nudge it back inside
+  // after layout, before the browser paints.
+  useLayoutEffect(() => {
+    const el = bubbleRef.current;
+    if (!open || !el) return;
+    el.style.transform = 'translateX(-50%)';
+    const rect = el.getBoundingClientRect();
+    let shift = 0;
+    if (rect.left < TOOLTIP_MARGIN) {
+      shift = TOOLTIP_MARGIN - rect.left;
+    } else if (rect.right > window.innerWidth - TOOLTIP_MARGIN) {
+      shift = window.innerWidth - TOOLTIP_MARGIN - rect.right;
+    }
+    if (shift !== 0) el.style.transform = `translateX(calc(-50% + ${Math.round(shift)}px))`;
+  }, [open, content]);
+
   return (
     <span
       className="tip"
@@ -146,7 +176,11 @@ export function Tooltip({ content, children }: { content: ReactNode; children: R
       onBlur={() => setOpen(false)}
     >
       {children}
-      {open && <span className="tip__bubble">{content}</span>}
+      {open && (
+        <span className="tip__bubble" ref={bubbleRef}>
+          {content}
+        </span>
+      )}
     </span>
   );
 }

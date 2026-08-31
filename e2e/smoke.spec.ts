@@ -307,6 +307,42 @@ test.describe('Cretaceous Tower Defense — smoke', () => {
     expect(errors.entries).toEqual([]);
   });
 
+  test('deployment tooltips stay inside the viewport', async ({ page }) => {
+    // Regression: the bubble is centred on its trigger, so the leftmost card's
+    // tooltip ran off the edge of `.app`, which clips overflow — it rendered
+    // as a chopped-off panel with the unit's name cut in half.
+    const errors = watchForErrors(page);
+    await page.goto(E2E_URL);
+    await enterResearchOutpost(page);
+
+    const cards = page.locator('.deploy-card');
+    const count = await cards.count();
+    expect(count).toBeGreaterThan(1);
+
+    for (const index of [0, count - 1]) {
+      await cards.nth(index).hover();
+      const bubble = page.locator('.tip__bubble');
+      await expect(bubble).toBeVisible();
+
+      const fits = await page.evaluate(() => {
+        const el = document.querySelector('.tip__bubble');
+        if (!el) return null;
+        const r = el.getBoundingClientRect();
+        return { left: r.left, right: r.right, width: r.width, viewport: window.innerWidth };
+      });
+      expect(fits).not.toBeNull();
+      expect(fits!.width).toBeGreaterThan(100);
+      expect(fits!.left).toBeGreaterThanOrEqual(0);
+      expect(fits!.right).toBeLessThanOrEqual(fits!.viewport);
+
+      // Move away so the next hover re-measures from scratch.
+      await page.mouse.move(700, 300);
+      await expect(bubble).toHaveCount(0);
+    }
+
+    expect(errors.entries).toEqual([]);
+  });
+
   test('the test bridge is absent during normal play', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('.title__logo')).toBeVisible();

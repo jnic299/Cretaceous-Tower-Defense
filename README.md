@@ -214,7 +214,7 @@ stored in the player's browser.
 
 ```bash
 npm test        # 199 written it() declarations, 229 executed cases
-npm run test:e2e   # 10 browser tests against the production build
+npm run test:e2e   # 11 browser tests against the production build
 ```
 
 The unit suite covers the parts where a mistake is expensive and invisible:
