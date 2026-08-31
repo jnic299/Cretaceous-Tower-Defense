@@ -12,7 +12,7 @@ interface Props {
   onOpenMenu: () => void;
   menuOpen: boolean;
   onCloseMenu: () => void;
-  onQuit: () => void;
+  onAbandon: () => void;
 }
 
 function formatClock(ms: number): string {
@@ -20,7 +20,7 @@ function formatClock(ms: number): string {
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
 }
 
-export function MatchHud({ hud, toasts, onCommand, onOpenMenu, menuOpen, onCloseMenu, onQuit }: Props) {
+export function MatchHud({ hud, toasts, onCommand, onOpenMenu, menuOpen, onCloseMenu, onAbandon }: Props) {
   const integrity = hud.objectiveHpMax > 0 ? hud.objectiveHp / hud.objectiveHpMax : 0;
   const tone = integrity > 0.5 ? 'default' : integrity > 0.25 ? 'warn' : 'danger';
   const waiting = hud.phase === 'preparing' || hud.phase === 'intermission';
@@ -155,7 +155,7 @@ export function MatchHud({ hud, toasts, onCommand, onOpenMenu, menuOpen, onClose
               <Button variant="ghost" onClick={onCloseMenu}>
                 Resume
               </Button>
-              <Button variant="danger" onClick={onQuit}>
+              <Button variant="danger" onClick={onAbandon}>
                 Abandon Operation
               </Button>
             </div>
@@ -177,7 +177,8 @@ export function MatchHud({ hud, toasts, onCommand, onOpenMenu, menuOpen, onClose
             </dl>
           </div>
           <p className="muted small">
-            Abandoning counts as a loss, but you keep the Amber for every wave you cleared.
+            Gameplay is frozen while this menu is open. Abandoning ends the operation as a loss —
+            you keep the Amber for every wave you cleared and every boss you put down, but no stars.
           </p>
         </Modal>
       )}

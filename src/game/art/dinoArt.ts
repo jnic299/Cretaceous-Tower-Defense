@@ -5,24 +5,15 @@ import { getTier } from '../data/tiers';
 import { makeRandom, mix, shade } from './color';
 import { bakeTexture, poly, ribbon } from './draw';
 
-/** Frames in the walk cycle. Four reads as motion without eating memory. */
-export const DINO_FRAMES = 4;
-/** Textures are baked larger than the base size so obsidian stays crisp. */
-export const DINO_SUPERSAMPLE = 1.4;
-/**
- * World-space multiplier on every creature. Body specs are authored in
- * relative proportions; this is the single dial that decides how large the
- * animals read against the map.
- */
-export const DINO_RENDER_SCALE = 1.45;
+import {
+  DINO_FRAMES,
+  DINO_RENDER_SCALE,
+  DINO_SUPERSAMPLE,
+  dinoShadowKey,
+  dinoTextureKey,
+} from './keys';
 
-export function dinoTextureKey(species: SpeciesId, tier: TierId, frame: number): string {
-  return `dino:${species}:${tier}:${frame}`;
-}
-
-export function dinoShadowKey(): string {
-  return 'fx:shadow';
-}
+export { DINO_FRAMES, DINO_RENDER_SCALE, DINO_SUPERSAMPLE, dinoShadowKey, dinoTextureKey };
 
 interface Palette {
   base: number;

@@ -12,6 +12,7 @@ import type {
   TierId,
 } from '../types';
 import type { GameSettings } from '../../persistence/schema';
+import type { MatchEndReason } from '../types';
 import { getMap } from '../data/maps';
 import { CHALLENGES_BY_ID } from '../data/challenges';
 import { findDefender, findFixture, findHero, isFixture } from '../data/catalog';
@@ -28,17 +29,20 @@ import { ProjectileSystem } from '../systems/ProjectileSystem';
 import { CombatSystem } from '../systems/CombatSystem';
 import { WaveSystem } from '../systems/WaveSystem';
 import { EconomySystem } from '../systems/EconomySystem';
+import { SimulationClock, simulationStepMs } from '../systems/SimulationClock';
 import { evaluatePlacement, snapToGrid, type OccupiedSlot, type PlacementVerdict } from '../systems/placementRules';
 
 import { Dino } from '../entities/Dino';
 import { DefenderUnit, HeroUnit, type PlacedUnit } from '../entities/PlacedUnit';
-import { FixtureUnit, bakeFixtureArt, fixtureTextureKey } from '../entities/Fixture';
+import { FixtureUnit } from '../entities/Fixture';
+import { bakeFixtureArt, fixtureTextureKey } from '../art/fixtureArt';
 
 import { bakeDinoVariant, bakeShadow } from '../art/dinoArt';
 import { bakeUnitArt, unitTopKey } from '../art/unitArt';
 import { bakeFxTextures, FX } from '../art/fxArt';
 import { DEPTH } from '../depth';
 import { audioManager } from '../../audio/AudioManager';
+import { publishTestState, clearTestState } from '../testBridge';
 import { gameBus, type CardState, type GameCommand, type HeroHudState, type HudSnapshot, type MatchPhase, type SelectionInfo } from '../events';
 
 export interface MatchConfig {
@@ -76,6 +80,8 @@ export class MatchScene extends Phaser.Scene {
   private combat!: CombatSystem;
   private waves!: WaveSystem;
   private economy!: EconomySystem;
+  /** Authoritative gameplay clock. Every deadline in the match uses it. */
+  private readonly clock = new SimulationClock();
 
   private dinos: Dino[] = [];
   private dinoPool: Dino[] = [];
@@ -92,9 +98,15 @@ export class MatchScene extends Phaser.Scene {
   private bossesDefeated = 0;
   private elapsed = 0;
   private wavesCleared = 0;
+  private unitsPlaced = 0;
+  private upgradesPurchased = 0;
   private speed = 1;
+  /** The player's explicit pause, toggled with Space or the HUD button. */
   private paused = false;
+  /** Set while the Operation Menu is open. Independent of `paused`. */
+  private menuOpen = false;
   private ended = false;
+  private tornDown = false;
   private speciesSeen = new Set<SpeciesId>();
   private killsBySpecies = new Map<SpeciesId, number>();
 
@@ -141,9 +153,14 @@ export class MatchScene extends Phaser.Scene {
     this.bossesDefeated = 0;
     this.elapsed = 0;
     this.wavesCleared = 0;
+    this.unitsPlaced = 0;
+    this.upgradesPurchased = 0;
     this.speed = 1;
     this.paused = false;
+    this.menuOpen = false;
     this.ended = false;
+    this.tornDown = false;
+    this.clock.reset();
     this.activeCardId = null;
     this.selected = null;
     this.abilityArmed = false;
@@ -207,7 +224,12 @@ export class MatchScene extends Phaser.Scene {
 
     if (this.config.tutorial) this.advanceTutorial('welcome');
 
+    // Phaser emits SHUTDOWN when a scene stops, but only DESTROY when the
+    // whole game is torn down — which is what React unmounting does. Listening
+    // for just one of them leaks the command subscription and leaves music
+    // playing after the player leaves a match.
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.teardown());
+    this.events.once(Phaser.Scenes.Events.DESTROY, () => this.teardown());
   }
 
   private bakeArt(): void {
@@ -281,27 +303,55 @@ export class MatchScene extends Phaser.Scene {
   /* Frame                                                               */
   /* ------------------------------------------------------------------ */
 
-  override update(time: number, delta: number): void {
-    const dt = this.paused ? 0 : Math.min(48, delta) * this.speed;
+  override update(_time: number, delta: number): void {
+    const dt = simulationStepMs(delta, this.speed, this.frozen || this.ended);
 
-    if (dt > 0 && !this.ended) {
+    if (dt > 0) {
+      // Advancing the clock first means any callback that comes due this
+      // frame sees the same `now` as the systems that run after it.
+      this.clock.advance(dt);
+      const now = this.clock.now;
       this.elapsed += dt;
       this.grid.rebuild(this.dinos);
-      this.updateDinos(time, dt);
-      this.combat.update(time, dt);
+      this.updateDinos(now, dt);
+      this.combat.update(now, dt);
       this.projectiles.update(dt);
-      this.updateFixtures(time, dt);
+      this.updateFixtures(now, dt);
       this.updatePhase(dt);
     }
 
     this.drawBars();
     this.drawSelection();
+    publishTestState(this.testState());
 
     this.hudAccumulator += delta;
     if (this.hudAccumulator >= HUD_INTERVAL_MS) {
       this.hudAccumulator = 0;
       this.publishHud();
     }
+  }
+
+  /** Snapshot for the browser-test bridge. Inert unless `?e2e=1`. */
+  private testState() {
+    return {
+      simTimeMs: this.clock.now,
+      phase: this.phase as string,
+      paused: this.paused,
+      menuOpen: this.menuOpen,
+      speed: this.speed,
+      supply: this.economy.supply,
+      objectiveHp: Math.ceil(this.objectiveHp),
+      kills: this.kills,
+      waveIndex: Math.max(0, this.waves.index + 1),
+      enemiesAlive: this.dinos.length,
+      placements: this.defenders.length + this.fixtures.length + (this.hero ? 1 : 0),
+      ended: this.ended,
+    };
+  }
+
+  /** True when no simulation time should pass: player pause or an open menu. */
+  private get frozen(): boolean {
+    return this.paused || this.menuOpen;
   }
 
   private updateDinos(now: number, dt: number): void {
@@ -369,7 +419,7 @@ export class MatchScene extends Phaser.Scene {
     const next = this.waves.index + 1;
     const def = this.waves.waveAt(next);
     if (!def) {
-      this.finish(true);
+      this.finish('victory');
       return;
     }
     this.waves.begin(next);
@@ -401,7 +451,7 @@ export class MatchScene extends Phaser.Scene {
     }
 
     if (this.waves.index >= this.waves.total - 1) {
-      this.finish(true);
+      this.finish('victory');
       return;
     }
 
@@ -435,7 +485,7 @@ export class MatchScene extends Phaser.Scene {
 
     const dino = this.dinoPool.pop() ?? new Dino(this);
     const lane = (Math.random() - 0.5) * path.def.width * 1.1;
-    dino.spawn(species, tier, path, lane, speedMult * (0.94 + Math.random() * 0.12), this.time.now);
+    dino.spawn(species, tier, path, lane, speedMult * (0.94 + Math.random() * 0.12), this.clock.now);
     this.dinos.push(dino);
 
     if (!this.speciesSeen.has(speciesId)) {
@@ -467,7 +517,7 @@ export class MatchScene extends Phaser.Scene {
     this.effects.shake(0.004, 220);
     audioManager.play('objectiveHit', { volume: 0.55 });
     this.toast(`${this.map.objective.name} hit  ·  -${dino.objectiveDamage}`, 'bad');
-    if (this.objectiveHp <= 0 && !this.ended) this.finish(false);
+    if (this.objectiveHp <= 0 && !this.ended) this.finish('defeat');
   }
 
   /* ------------------------------------------------------------------ */
@@ -599,7 +649,7 @@ export class MatchScene extends Phaser.Scene {
 
     if (this.activeCardId === HERO_MOVE && this.hero) {
       this.hero.moveTo(x, y);
-      this.hero.repositionReadyAt = this.time.now + this.hero.def.repositionCooldownMs;
+      this.hero.repositionReadyAt = this.clock.now + this.hero.def.repositionCooldownMs;
       this.activeCardId = null;
       this.refreshGhostTexture();
       this.combat.markPlacementsChanged();
@@ -611,6 +661,7 @@ export class MatchScene extends Phaser.Scene {
     if (this.activeCardId === HERO_CARD && this.heroDef) {
       if (!this.economy.spend(this.heroDef.deployCost)) return;
       this.hero = new HeroUnit(this, `hero-${++unitSeq}`, this.heroDef, x, y);
+      this.unitsPlaced += 1;
       this.combat.hero = this.hero;
       this.combat.markPlacementsChanged();
       this.activeCardId = null;
@@ -628,8 +679,9 @@ export class MatchScene extends Phaser.Scene {
       return;
     }
 
+    this.unitsPlaced += 1;
     if (placeable.category === 'fixture') {
-      const fixture = new FixtureUnit(this, `fx-${++unitSeq}`, placeable as FixtureDef, x, y, this.time.now);
+      const fixture = new FixtureUnit(this, `fx-${++unitSeq}`, placeable as FixtureDef, x, y, this.clock.now);
       this.fixtures.push(fixture);
     } else {
       const unit = new DefenderUnit(this, `u-${++unitSeq}`, placeable as DefenderDef, x, y);
@@ -763,7 +815,7 @@ export class MatchScene extends Phaser.Scene {
 
   private armHeroAbility(): void {
     if (!this.hero || !this.heroDef) return;
-    if (this.time.now < this.hero.abilityReadyAt) {
+    if (this.clock.now < this.hero.abilityReadyAt) {
       audioManager.play('error', { volume: 0.35 });
       return;
     }
@@ -781,10 +833,10 @@ export class MatchScene extends Phaser.Scene {
     const hero = this.hero;
     const def = this.heroDef;
     if (!hero || !def) return;
-    if (this.time.now < hero.abilityReadyAt) return;
+    if (this.clock.now < hero.abilityReadyAt) return;
 
     const ability = def.ability;
-    hero.abilityReadyAt = this.time.now + ability.cooldownMs;
+    hero.abilityReadyAt = this.clock.now + ability.cooldownMs;
     this.abilityArmed = false;
     audioManager.play('heroAbility', { volume: 0.75 });
 
@@ -811,13 +863,16 @@ export class MatchScene extends Phaser.Scene {
           ease: 'Sine.easeInOut',
           onComplete: () => craft.destroy(),
         });
+        // Damage is scheduled on the simulation clock, so the strafing run
+        // obeys pause and game speed exactly like everything else, and its
+        // pending shots are dropped if the match ends first.
         for (let i = 0; i < shots; i++) {
-          this.time.delayedCall(450 + (i * duration) / shots, () => {
+          this.clock.schedule(450 + (i * duration) / shots, () => {
             if (this.ended) return;
             const spread = radius * 0.75;
             const px = x + (Math.random() - 0.5) * spread * 2;
             const py = y + (Math.random() - 0.5) * spread * 2;
-            this.combat.detonate(px, py, radius * 0.45, damage, 0.5, type, {}, hero);
+            this.combat.detonate(px, py, radius * 0.45, damage, 0.5, type, {}, hero, this.clock.now);
           });
         }
         break;
@@ -892,6 +947,9 @@ export class MatchScene extends Phaser.Scene {
       case 'togglePause':
         this.togglePause();
         break;
+      case 'setMenuOpen':
+        this.setMenuOpen(cmd.open);
+        break;
       case 'startWave':
         this.tryStartWaveEarly();
         break;
@@ -913,11 +971,8 @@ export class MatchScene extends Phaser.Scene {
       case 'heroReposition':
         this.beginHeroReposition();
         break;
-      case 'restart':
-        this.scene.restart(this.config);
-        break;
       case 'quit':
-        this.finish(false, true);
+        this.finish('abandoned');
         break;
     }
   }
@@ -927,7 +982,7 @@ export class MatchScene extends Phaser.Scene {
       if (this.heroDef) this.selectCard(HERO_CARD);
       return;
     }
-    if (this.time.now < this.hero.repositionReadyAt) {
+    if (this.clock.now < this.hero.repositionReadyAt) {
       audioManager.play('error', { volume: 0.35 });
       return;
     }
@@ -935,16 +990,35 @@ export class MatchScene extends Phaser.Scene {
   }
 
   private setSpeed(speed: number): void {
+    if (this.ended) return;
     this.speed = Math.max(1, Math.min(3, speed));
     this.paused = false;
-    this.time.timeScale = this.speed;
-    this.tweens.timeScale = this.speed;
+    this.syncPresentationSpeed();
   }
 
   private togglePause(): void {
+    if (this.ended) return;
     this.paused = !this.paused;
-    this.time.timeScale = this.paused ? 0.0001 : this.speed;
-    this.tweens.timeScale = this.paused ? 0.0001 : this.speed;
+    this.syncPresentationSpeed();
+  }
+
+  /**
+   * Opening the Operation Menu freezes the match without touching the
+   * player's own pause, so closing it resumes exactly the state they left:
+   * running stays running, and an explicit pause stays paused.
+   */
+  private setMenuOpen(open: boolean): void {
+    if (this.menuOpen === open) return;
+    this.menuOpen = open;
+    this.syncPresentationSpeed();
+  }
+
+  /**
+   * Tweens and particles are presentation only, but they should still look
+   * right: match their rate to the simulation and stall them while frozen.
+   */
+  private syncPresentationSpeed(): void {
+    this.tweens.timeScale = this.frozen ? 0.0001 : this.speed;
   }
 
   private upgradeSelected(): void {
@@ -957,6 +1031,7 @@ export class MatchScene extends Phaser.Scene {
       return;
     }
     sel.applyUpgrade();
+    this.upgradesPurchased += 1;
     this.combat.markPlacementsChanged();
     audioManager.play('upgrade', { volume: 0.6 });
     this.effects.damageNumber(sel.x, sel.y - 18, sel.level + 1, 'shock', true);
@@ -1036,7 +1111,7 @@ export class MatchScene extends Phaser.Scene {
         }
       }
       // Status ticks.
-      const now = this.time.now;
+      const now = this.clock.now;
       if (now < d.slowUntil) {
         g.fillStyle(0x9be8ff, 0.95);
         g.fillRect(x - 5, y, 3, h);
@@ -1053,7 +1128,7 @@ export class MatchScene extends Phaser.Scene {
 
     // Fixture condition bars.
     for (const f of this.fixtures) {
-      const cond = f.condition(this.time.now);
+      const cond = f.condition(this.clock.now);
       if (cond >= 0.999) continue;
       const w = 34;
       const x = f.x - w / 2;
@@ -1148,7 +1223,7 @@ export class MatchScene extends Phaser.Scene {
         canAffordUpgrade: false,
         sellValue: sel.sellValue,
         buffed: false,
-        condition: sel.condition(this.time.now),
+        condition: sel.condition(this.clock.now),
       };
     }
 
@@ -1207,7 +1282,7 @@ export class MatchScene extends Phaser.Scene {
 
   private buildHeroState(): HeroHudState | null {
     if (!this.heroDef) return null;
-    const now = this.time.now;
+    const now = this.clock.now;
     return {
       id: this.heroDef.id,
       name: this.heroDef.name,
@@ -1275,21 +1350,34 @@ export class MatchScene extends Phaser.Scene {
   /* End of match                                                        */
   /* ------------------------------------------------------------------ */
 
-  private finish(victory: boolean, quit = false): void {
+  /**
+   * Ends the match exactly once and emits exactly one result.
+   *
+   * Abandoning is a loss the player chose: it is recorded like any other
+   * loss, pays the same partial rewards for waves cleared and bosses
+   * defeated, and never awards stars or a first clear.
+   */
+  private finish(endReason: MatchEndReason): void {
     if (this.ended) return;
     this.ended = true;
+    const victory = endReason === 'victory';
     this.phase = victory ? 'victory' : 'defeat';
     this.paused = true;
+    // Nothing scheduled before the end may land after it.
+    this.clock.clear();
 
     audioManager.stopMusic();
-    if (!quit) audioManager.play(victory ? 'victory' : 'defeat', { volume: 0.8 });
+    if (endReason !== 'abandoned') {
+      audioManager.play(victory ? 'victory' : 'defeat', { volume: 0.8 });
+    }
 
     const integrity = this.objectiveHp / this.objectiveHpMax;
     const result: MatchResult = {
       mapId: this.map.id,
       challengeId: this.config.challengeId,
+      endReason,
       victory,
-      stars: quit ? 0 : starsFor(victory, integrity),
+      stars: starsFor(victory, integrity),
       objectiveHpRemaining: Math.max(0, Math.ceil(this.objectiveHp)),
       objectiveHpMax: this.objectiveHpMax,
       wavesCleared: this.wavesCleared,
@@ -1297,6 +1385,9 @@ export class MatchScene extends Phaser.Scene {
       kills: this.kills,
       bossesDefeated: this.bossesDefeated,
       supplyEarned: this.economy.earned,
+      supplySpent: this.economy.grossSpent,
+      unitsPlaced: this.unitsPlaced,
+      upgradesPurchased: this.upgradesPurchased,
       amberEarned: 0,
       amberBreakdown: [],
       durationMs: this.elapsed,
@@ -1305,7 +1396,7 @@ export class MatchScene extends Phaser.Scene {
       newlyUnlockedStars: 0,
     };
 
-    if (!quit) {
+    if (endReason !== 'abandoned') {
       this.effects.banner(
         this.map.width / 2,
         this.map.height / 2 - 40,
@@ -1313,14 +1404,21 @@ export class MatchScene extends Phaser.Scene {
         victory ? '#8de89a' : '#ff7a6b',
       );
       this.cameras.main.fade(700, 6, 10, 14, false);
+      // Presentation delay only; the result is already fixed.
+      this.time.delayedCall(900, () => gameBus.emit('matchEnd', result));
+    } else {
+      gameBus.emit('matchEnd', result);
     }
-
-    this.time.delayedCall(quit ? 0 : 900, () => gameBus.emit('matchEnd', result));
   }
 
+  /** Safe to call more than once: both SHUTDOWN and DESTROY route here. */
   private teardown(): void {
+    if (this.tornDown) return;
+    this.tornDown = true;
     this.unsubscribe?.();
     this.unsubscribe = null;
+    this.clock.clear();
+    clearTestState();
     audioManager.stopMusic();
     this.projectiles?.destroy();
     this.effects?.destroy();

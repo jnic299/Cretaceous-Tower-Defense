@@ -28,6 +28,8 @@ function Router() {
   const { profile, ready, leaveTitle } = useProfile();
   const [route, setRoute] = useState<Route>({ name: 'title' });
   const [lastBriefing, setLastBriefing] = useState<{ mapId: string; challengeId?: string } | null>(null);
+  // Bumped for every match so replaying a level always mounts a fresh screen.
+  const [matchSeq, setMatchSeq] = useState(0);
 
   const go = useCallback(
     (next: Route) => {
@@ -41,6 +43,7 @@ function Router() {
   const startMatch = useCallback(
     (mapId: string, challengeId: string | undefined, heroId: string | null, loadout: string[]) => {
       setLastBriefing({ mapId, challengeId });
+      setMatchSeq((n) => n + 1);
       const config: MatchConfig = {
         mapId,
         heroId,
@@ -97,8 +100,8 @@ function Router() {
     case 'match':
       return (
         <MatchScreen
+          key={`${route.config.mapId}:${route.config.challengeId ?? ''}:${matchSeq}`}
           config={route.config}
-          onExit={() => go({ name: 'maps' })}
           onComplete={(result) => go({ name: 'results', result })}
         />
       );

@@ -543,9 +543,18 @@ export interface ChallengeDef {
 /* Match results                                                       */
 /* ------------------------------------------------------------------ */
 
+/**
+ * How a match ended. `abandoned` is a loss that the player chose, and is
+ * distinguished from a defeat so the results screen can say so honestly —
+ * the rewards are identical either way.
+ */
+export type MatchEndReason = 'victory' | 'defeat' | 'abandoned';
+
 export interface MatchResult {
   mapId: string;
   challengeId?: string;
+  endReason: MatchEndReason;
+  /** Always `endReason === 'victory'`. Kept because reward rules read it. */
   victory: boolean;
   stars: 0 | 1 | 2 | 3;
   objectiveHpRemaining: number;
@@ -555,6 +564,11 @@ export interface MatchResult {
   kills: number;
   bossesDefeated: number;
   supplyEarned: number;
+  /** Gross Supply committed during the match; refunds do not reduce it. */
+  supplySpent: number;
+  /** Defenders, turrets, fixtures and the hero, counted once at deployment. */
+  unitsPlaced: number;
+  upgradesPurchased: number;
   amberEarned: number;
   amberBreakdown: { label: string; amount: number }[];
   durationMs: number;

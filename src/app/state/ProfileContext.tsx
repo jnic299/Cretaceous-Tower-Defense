@@ -17,7 +17,7 @@ import { MemoryGameSaveRepository } from '../../persistence/GameSaveRepository';
 import { migrateSave } from '../../persistence/migrations';
 import { createProfile } from '../../progression/profile';
 import { applyUnlock, canUnlock, type UnlockKind } from '../../progression/unlocks';
-import { applyMatchResult } from '../../progression/applyResult';
+import { applyMatchResult, type MatchCompletionOptions } from '../../progression/applyResult';
 import { audioManager } from '../../audio/AudioManager';
 
 /** Swap this factory to move progression to a server without touching the UI. */
@@ -34,9 +34,13 @@ interface ProfileContextValue {
   canAfford: (kind: UnlockKind, id: string) => ReturnType<typeof canUnlock>;
   updateSettings: (patch: Partial<GameSettings>) => void;
   selectHero: (heroId: string) => void;
-  finishMatch: (result: MatchResult, map: MapDef, challenge?: ChallengeDef) => MatchResult;
+  finishMatch: (
+    result: MatchResult,
+    map: MapDef,
+    challenge?: ChallengeDef,
+    options?: MatchCompletionOptions,
+  ) => MatchResult;
   recordSighting: (species: SpeciesId) => void;
-  completeTutorial: () => void;
   leaveTitle: () => void;
   resetProfile: () => void;
 }
@@ -52,6 +56,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<PlayerProfile>(() => createProfile());
   const [ready, setReady] = useState(false);
   const saveTimer = useRef<number | null>(null);
+  const pendingSave = useRef<PlayerProfile | null>(null);
 
   // Load once on mount.
   useEffect(() => {
@@ -71,14 +76,35 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   // only place that ever writes.
   useEffect(() => {
     if (!ready) return;
+    pendingSave.current = profile;
     if (saveTimer.current !== null) window.clearTimeout(saveTimer.current);
     saveTimer.current = window.setTimeout(() => {
+      pendingSave.current = null;
       void repo.save({ version: SAVE_VERSION, profile });
     }, 300);
     return () => {
       if (saveTimer.current !== null) window.clearTimeout(saveTimer.current);
     };
   }, [profile, ready, repo]);
+
+  // A reload or tab close inside the debounce window would otherwise drop the
+  // most recent change, so flush whatever is still pending.
+  useEffect(() => {
+    const flush = () => {
+      const pending = pendingSave.current;
+      if (!pending) return;
+      pendingSave.current = null;
+      if (saveTimer.current !== null) window.clearTimeout(saveTimer.current);
+      void repo.save({ version: SAVE_VERSION, profile: pending });
+    };
+    window.addEventListener('pagehide', flush);
+    window.addEventListener('beforeunload', flush);
+    return () => {
+      window.removeEventListener('pagehide', flush);
+      window.removeEventListener('beforeunload', flush);
+      flush();
+    };
+  }, [repo]);
 
   // Keep the audio buses in step with the player's settings.
   useEffect(() => {
@@ -121,32 +147,44 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
-  const completeTutorial = useCallback(() => {
-    setProfile((c) => (c.tutorialCompleted ? c : { ...c, tutorialCompleted: true }));
-  }, []);
-
   const leaveTitle = useCallback(() => {
     setProfile((c) => (c.firstRun ? { ...c, firstRun: false } : c));
   }, []);
 
   const resetProfile = useCallback(() => {
     const fresh = createProfile();
+    pendingSave.current = null;
+    if (saveTimer.current !== null) window.clearTimeout(saveTimer.current);
     setProfile(fresh);
     void repo.save({ version: SAVE_VERSION, profile: fresh });
   }, [repo]);
 
   /**
-   * Applies a finished match and returns the enriched result. The reducer is
-   * pure, but React may invoke updaters twice in StrictMode, so the award is
-   * computed once here against the latest profile and then committed.
+   * Applies a finished match as one profile transition.
+   *
+   * The reducer runs inside the state updater so it always folds into the
+   * profile React actually holds, rather than one captured when this callback
+   * was created. Everything end-of-match — rewards, stars, stats, codex and
+   * tutorial completion — lands in that single write, so no later update can
+   * silently overwrite part of it. `applyMatchResult` is pure and
+   * deterministic, so StrictMode's double invocation yields the same result.
    */
   const finishMatch = useCallback(
-    (result: MatchResult, map: MapDef, challenge?: ChallengeDef): MatchResult => {
-      const outcome = applyMatchResult(profile, result, map, challenge);
-      setProfile(outcome.profile);
-      return outcome.result;
+    (
+      result: MatchResult,
+      map: MapDef,
+      challenge?: ChallengeDef,
+      options?: MatchCompletionOptions,
+    ): MatchResult => {
+      let enriched = result;
+      setProfile((current) => {
+        const outcome = applyMatchResult(current, result, map, challenge, options);
+        enriched = outcome.result;
+        return outcome.profile;
+      });
+      return enriched;
     },
-    [profile],
+    [],
   );
 
   const value = useMemo<ProfileContextValue>(
@@ -160,7 +198,6 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       selectHero,
       finishMatch,
       recordSighting,
-      completeTutorial,
       leaveTitle,
       resetProfile,
     }),
@@ -174,7 +211,6 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       selectHero,
       finishMatch,
       recordSighting,
-      completeTutorial,
       leaveTitle,
       resetProfile,
     ],

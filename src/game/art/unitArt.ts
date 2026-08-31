@@ -9,13 +9,9 @@ import { bakeTexture, panel, poly, ribbon } from './draw';
  * means units visibly track their target without the sandbags spinning.
  */
 
-export function unitBaseKey(id: string, level: number): string {
-  return `unit:${id}:base:${level}`;
-}
+import { UNIT_RENDER_SCALE, unitBaseKey, unitTopKey } from './keys';
 
-export function unitTopKey(id: string, level: number): string {
-  return `unit:${id}:top:${level}`;
-}
+export { UNIT_RENDER_SCALE, unitBaseKey, unitTopKey };
 
 const DARK = 0x25282e;
 
@@ -482,9 +478,6 @@ function drawVehicleTop(g: Phaser.GameObjects.Graphics, cx: number, cy: number, 
 /* ------------------------------------------------------------------ */
 /* Baking                                                              */
 /* ------------------------------------------------------------------ */
-
-/** World-space multiplier on every placed unit, matching the creature dial. */
-export const UNIT_RENDER_SCALE = 1.3;
 
 export const UNIT_BASE_SIZE = 64 * UNIT_RENDER_SCALE;
 export const UNIT_TOP_SIZE = 128 * UNIT_RENDER_SCALE;

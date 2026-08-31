@@ -11,7 +11,6 @@ import { TutorialCoach } from '../components/hud/TutorialCoach';
 
 interface Props {
   config: MatchConfig;
-  onExit: () => void;
   onComplete: (result: MatchResult) => void;
 }
 
@@ -19,17 +18,27 @@ interface Props {
  * Hosts the Phaser canvas and the DOM HUD. React never touches the simulation
  * directly — it reads throttled snapshots off the bus and sends commands back.
  */
-export function MatchScreen({ config, onExit, onComplete }: Props) {
+export function MatchScreen({ config, onComplete }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   const appRef = useRef<GameApp | null>(null);
-  const { finishMatch, recordSighting, completeTutorial } = useProfile();
+  const { finishMatch, recordSighting } = useProfile();
   const [hud, setHud] = useState<HudSnapshot | null>(null);
   const [toasts, setToasts] = useState<ToastPayload[]>([]);
   const [tutorialStep, setTutorialStep] = useState<string | null>(config.tutorial ? 'welcome' : null);
   const [menuOpen, setMenuOpen] = useState(false);
   const completedRef = useRef(false);
+  // Held in a ref so the bus subscription below never has to be torn down and
+  // rebuilt just because a parent render produced a new callback identity.
+  const onCompleteRef = useRef(onComplete);
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
 
   const map = useMemo(() => getMap(config.mapId), [config.mapId]);
+
+  const send = useCallback((cmd: Parameters<typeof gameBus.emit<'command'>>[1]) => {
+    gameBus.emit('command', cmd);
+  }, []);
   const challenge = config.challengeId ? CHALLENGES_BY_ID[config.challengeId] : undefined;
 
   // Mount the engine once per match configuration.
@@ -64,11 +73,15 @@ export function MatchScreen({ config, onExit, onComplete }: Props) {
     });
 
     const offEnd = gameBus.on('matchEnd', (result) => {
+      // The scene emits once per match, but guard anyway: processing a result
+      // twice would pay the rewards twice.
       if (completedRef.current) return;
       completedRef.current = true;
-      if (config.tutorial) completeTutorial();
-      const enriched = finishMatch(result, map, challenge);
-      onComplete(enriched);
+      // Rewards, stats and tutorial completion are one profile transition.
+      const enriched = finishMatch(result, map, challenge, {
+        completedTutorial: config.tutorial,
+      });
+      onCompleteRef.current(enriched);
     });
 
     return () => {
@@ -78,16 +91,28 @@ export function MatchScreen({ config, onExit, onComplete }: Props) {
       offCodex();
       offEnd();
     };
-  }, [config.tutorial, finishMatch, recordSighting, completeTutorial, map, challenge, onComplete]);
+  }, [config.tutorial, finishMatch, recordSighting, map, challenge]);
 
-  const send = useCallback((cmd: Parameters<typeof gameBus.emit<'command'>>[1]) => {
-    gameBus.emit('command', cmd);
-  }, []);
 
-  const quit = useCallback(() => {
+  // Abandoning runs the engine's end-of-match path, so it produces exactly one
+  // result, records the loss and pays the partial rewards the UI promises.
+  const abandon = useCallback(() => {
     setMenuOpen(false);
-    onExit();
-  }, [onExit]);
+    send({ type: 'setMenuOpen', open: false });
+    send({ type: 'quit' });
+  }, [send]);
+
+  // The scene freezes while the menu is open and restores the player's own
+  // pause state when it closes.
+  const openMenu = useCallback(() => {
+    setMenuOpen(true);
+    send({ type: 'setMenuOpen', open: true });
+  }, [send]);
+
+  const closeMenu = useCallback(() => {
+    setMenuOpen(false);
+    send({ type: 'setMenuOpen', open: false });
+  }, [send]);
 
   return (
     <div className="screen match">
@@ -98,10 +123,10 @@ export function MatchScreen({ config, onExit, onComplete }: Props) {
           hud={hud}
           toasts={toasts}
           onCommand={send}
-          onOpenMenu={() => setMenuOpen(true)}
+          onOpenMenu={openMenu}
           menuOpen={menuOpen}
-          onCloseMenu={() => setMenuOpen(false)}
-          onQuit={quit}
+          onCloseMenu={closeMenu}
+          onAbandon={abandon}
         />
       )}
 

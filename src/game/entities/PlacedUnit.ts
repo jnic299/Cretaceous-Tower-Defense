@@ -1,7 +1,7 @@
-import Phaser from 'phaser';
+import type Phaser from 'phaser';
 import type { AttackSpec, DefenderDef, DefenderLevel, HeroDef, TargetMode } from '../types';
 import type { Dino } from './Dino';
-import { unitBaseKey, unitTopKey } from '../art/unitArt';
+import { unitBaseKey, unitTopKey } from '../art/keys';
 import { shotIntervalMs } from '../systems/combatMath';
 import { DEPTH } from '../depth';
 import { angleDelta } from '../../utils/geometry';

@@ -100,10 +100,13 @@ export class WaveSystem {
     return this.current;
   }
 
-  /** Advances the clock and returns everything due this frame. */
+  /**
+   * Advances the wave clock and returns everything due this frame.
+   * A zero or negative step releases nothing: a frozen match spawns nothing.
+   */
   tick(deltaMs: number): ScheduledSpawn[] {
     const wave = this.current;
-    if (!wave) return [];
+    if (!wave || deltaMs <= 0) return [];
     wave.elapsed += deltaMs;
     const due: ScheduledSpawn[] = [];
     while (wave.cursor < wave.queue.length && wave.queue[wave.cursor].atMs <= wave.elapsed) {

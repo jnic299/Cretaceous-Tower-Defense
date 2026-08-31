@@ -98,6 +98,7 @@ export type GameCommand =
   | { type: 'selectCard'; id: string | null }
   | { type: 'setSpeed'; speed: number }
   | { type: 'togglePause' }
+  | { type: 'setMenuOpen'; open: boolean }
   | { type: 'startWave' }
   | { type: 'upgrade' }
   | { type: 'sell' }
@@ -105,7 +106,6 @@ export type GameCommand =
   | { type: 'deselect' }
   | { type: 'heroAbility' }
   | { type: 'heroReposition' }
-  | { type: 'restart' }
   | { type: 'quit' };
 
 export interface ToastPayload {

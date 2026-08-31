@@ -1,7 +1,13 @@
-import Phaser from 'phaser';
+import type Phaser from 'phaser';
 import type { SpeciesDef, SpeciesId, TierDef, TierId } from '../types';
 import type { PathRuntime } from '../systems/MapGeometry';
-import { DINO_FRAMES, DINO_RENDER_SCALE, DINO_SUPERSAMPLE, dinoShadowKey, dinoTextureKey } from '../art/dinoArt';
+import {
+  DINO_FRAMES,
+  DINO_RENDER_SCALE,
+  DINO_SUPERSAMPLE,
+  dinoShadowKey,
+  dinoTextureKey,
+} from '../art/keys';
 import { effectiveArmor, scaledBounty, scaledHp, scaledObjectiveDamage, scaledSpeed } from '../systems/combatMath';
 import { DEPTH } from '../depth';
 

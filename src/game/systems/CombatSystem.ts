@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+import type Phaser from 'phaser';
 import type { AttackSpec, DamageType, SlowSpec, StunSpec, BurnSpec } from '../types';
 import type { Dino } from '../entities/Dino';
 import type { DefenderUnit, HeroUnit, PlacedUnit } from '../entities/PlacedUnit';
@@ -9,7 +9,7 @@ import type { EffectsSystem } from './EffectsSystem';
 import type { Projectile, ProjectileSystem } from './ProjectileSystem';
 import { applyArmor, splashDamageAt } from './combatMath';
 import { selectTarget } from './targeting';
-import { FX } from '../art/fxArt';
+import { FX } from '../art/keys';
 import type { AudioManager } from '../../audio/AudioManager';
 
 const PROJECTILE_TEXTURES: Record<string, string> = {
@@ -77,6 +77,12 @@ export class CombatSystem {
   hero: HeroUnit | null = null;
 
   private projectiles!: ProjectileSystem;
+  /**
+   * Simulation time for the frame in progress. Projectile impacts and hero
+   * detonations resolve after `update` has returned, so they read this rather
+   * than reaching for a wall clock.
+   */
+  private now = 0;
 
   constructor(private readonly deps: CombatDeps) {}
 
@@ -98,6 +104,7 @@ export class CombatSystem {
   /* ------------------------------------------------------------------ */
 
   update(now: number, deltaMs: number): void {
+    this.now = now;
     if (this.auraDirty || now >= this.nextAuraAt) {
       this.recomputeAuras();
       this.recomputeHerds();
@@ -254,7 +261,7 @@ export class CombatSystem {
     if (projectileSpeed <= 0) return { x: target.x, y: target.y };
     const dist = Math.hypot(target.x - unit.x, target.y - unit.y);
     const t = dist / projectileSpeed;
-    const speed = target.currentSpeed(this.deps.scene.time.now);
+    const speed = target.currentSpeed(this.now);
     return {
       x: target.x + Math.cos(target.angle) * speed * t,
       y: target.y + Math.sin(target.angle) * speed * t,
@@ -497,7 +504,7 @@ export class CombatSystem {
     source: PlacedUnit | null,
   ): void {
     if (!dino.alive) return;
-    const now = this.deps.scene.time.now;
+    const now = this.now;
     const dealt = applyArmor(rawDamage, dino.armor, options.armorPierce ?? 0);
 
     dino.hp -= dealt;
@@ -556,7 +563,9 @@ export class CombatSystem {
     type: DamageType,
     options: DamageOptions,
     source: PlacedUnit | null,
+    now?: number,
   ): void {
+    if (now !== undefined) this.now = now;
     const near = this.deps.grid.queryCircle(x, y, radius, this.chainScratch);
     for (const d of near) {
       const dist = Math.hypot(d.x - x, d.y - y);

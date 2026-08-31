@@ -41,6 +41,19 @@ describe('EconomySystem', () => {
     expect(e.supply).toBe(86);
     expect(e.earned).toBe(earnedBefore);
     expect(e.spent).toBe(14);
+    // A refund returns the Supply but does not rewrite history: the lifetime
+    // statistic is built from the gross figure.
+    expect(e.grossSpent).toBe(45);
+  });
+
+  it('never lets a refund reduce the gross spend', () => {
+    const e = new EconomySystem(300);
+    e.spend(45);
+    e.spend(95);
+    e.refund(31);
+    e.spend(60);
+    expect(e.grossSpent).toBe(200);
+    expect(e.spent).toBe(169);
   });
 
   it('never reports a negative spend', () => {

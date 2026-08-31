@@ -16,6 +16,12 @@ interface Props {
 
 const GRADES = ['Perimeter Lost', 'Held, Barely', 'Solid Defence', 'Textbook'] as const;
 
+const HEADLINES: Record<string, string> = {
+  victory: 'Perimeter Held',
+  defeat: 'Perimeter Lost',
+  abandoned: 'Operation Abandoned',
+};
+
 export function ResultsScreen({ result, onReplay, onArmory, onContinue }: Props) {
   const map = getMap(result.mapId);
   const challenge = result.challengeId ? CHALLENGES_BY_ID[result.challengeId] : undefined;
@@ -36,6 +42,9 @@ export function ResultsScreen({ result, onReplay, onArmory, onContinue }: Props)
   }, [result.stars]);
 
   const nextGoal = useMemo(() => {
+    if (result.endReason === 'abandoned') {
+      return 'Withdrawn before the final wave. Progress toward stars is only banked on a clear.';
+    }
     if (!result.victory) return 'Hold the objective to the final wave to earn your first star.';
     if (result.stars >= 3) return 'Maximum rating. Try a Challenge for more Amber.';
     if (result.stars === 2)
@@ -46,7 +55,7 @@ export function ResultsScreen({ result, onReplay, onArmory, onContinue }: Props)
   return (
     <div className="screen page results">
       <div className={`results__banner ${result.victory ? 'is-win' : 'is-loss'}`}>
-        <h2>{result.victory ? 'Perimeter Held' : 'Perimeter Lost'}</h2>
+        <h2>{HEADLINES[result.endReason] ?? (result.victory ? 'Perimeter Held' : 'Perimeter Lost')}</h2>
         <p>
           {challenge ? `${challenge.name} · ` : ''}
           {map.name}
@@ -59,7 +68,9 @@ export function ResultsScreen({ result, onReplay, onArmory, onContinue }: Props)
             <div className="results__stars">
               <Stars value={revealed} large />
             </div>
-            <div className="results__grade">{GRADES[result.stars]}</div>
+            <div className="results__grade">
+          {result.endReason === 'abandoned' ? 'Withdrawn' : GRADES[result.stars]}
+        </div>
             <p className="muted small">{nextGoal}</p>
             <div className="statgrid">
               <Stat label="Objective integrity" value={`${Math.round(integrity * 100)}%`} />
@@ -67,6 +78,9 @@ export function ResultsScreen({ result, onReplay, onArmory, onContinue }: Props)
               <Stat label="Confirmed kills" value={result.kills.toLocaleString()} />
               <Stat label="Bosses defeated" value={result.bossesDefeated} />
               <Stat label="Supply handled" value={result.supplyEarned.toLocaleString()} />
+              <Stat label="Supply spent" value={result.supplySpent.toLocaleString()} />
+              <Stat label="Units deployed" value={result.unitsPlaced} />
+              <Stat label="Upgrades bought" value={result.upgradesPurchased} />
               <Stat
                 label="Duration"
                 value={`${Math.floor(result.durationMs / 60000)}m ${Math.floor((result.durationMs % 60000) / 1000)}s`}

@@ -2,28 +2,9 @@ import Phaser from 'phaser';
 import { shade } from './color';
 import { bakeTexture, panel, poly, softCircle } from './draw';
 
-/** Projectile and particle textures. Keys are stable so FX code can look them up. */
-export const FX = {
-  dart: 'proj:dart',
-  spike: 'proj:spike',
-  bullet: 'proj:bullet',
-  arc: 'proj:arc',
-  grenade: 'proj:grenade',
-  shell: 'proj:shell',
-  slug: 'proj:slug',
-  frost: 'proj:frost',
-  spark: 'fx:spark',
-  smoke: 'fx:smoke',
-  dust: 'fx:dust',
-  flame: 'fx:flame',
-  ember: 'fx:ember',
-  ring: 'fx:ring',
-  muzzle: 'fx:muzzle',
-  glow: 'fx:glow',
-  star: 'fx:star',
-  chunk: 'fx:chunk',
-  snow: 'fx:snow',
-} as const;
+import { FX } from './keys';
+
+export { FX };
 
 export function bakeFxTextures(scene: Phaser.Scene): void {
   // ---- Projectiles (drawn pointing +x) --------------------------------

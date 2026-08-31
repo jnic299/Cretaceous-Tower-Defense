@@ -29,6 +29,7 @@ npm run dev        # http://localhost:5173
 | `npm run typecheck` | TypeScript project references, no emit |
 | `npm run lint` | ESLint (flat config, TypeScript + React Hooks rules) |
 | `npm test` | Vitest unit suite |
+| `npm run test:e2e` | Playwright browser smoke suite (builds and serves automatically) |
 | `npm run verify` | typecheck → lint → test → build, in that order |
 
 Requires Node 20 or newer.
@@ -90,9 +91,12 @@ src/
     state/           ProfileContext — loads, mutates and autosaves the profile
   game/              Phaser: everything real-time
     scenes/          MatchScene — orchestration only; systems do the work
-    systems/         MapGeometry, TerrainRenderer, CombatSystem, WaveSystem,
-                     ProjectileSystem, EffectsSystem, SpatialGrid,
-                     EconomySystem, targeting, placementRules, combatMath
+    systems/         SimulationClock, MapGeometry, TerrainRenderer,
+                     CombatSystem, WaveSystem, ProjectileSystem,
+                     EffectsSystem, SpatialGrid, EconomySystem, targeting,
+                     placementRules, combatMath
+    art/keys.ts      Texture key names, free of any Phaser import
+    testBridge.ts    Read-only telemetry for browser tests (?e2e=1 only)
     entities/        Dino, PlacedUnit (defenders + heroes), Fixture
     data/            All balance and content tables
     art/             Procedural texture generation for the canvas
@@ -118,6 +122,8 @@ tests/               Vitest suites
 | Star thresholds and Amber payouts | `src/progression/rewards.ts` |
 | What a new player starts with | `STARTING_UNLOCKS` in `src/game/data/catalog.ts` |
 | Save schema and migrations | `src/persistence/schema.ts`, `migrations.ts` |
+| What happens when a match ends | `src/progression/applyResult.ts` |
+| How gameplay time advances | `src/game/systems/SimulationClock.ts` |
 | Damage, armour and splash maths | `src/game/systems/combatMath.ts` |
 
 Balance numbers live in data files, never in scene code. `tests/dataIntegrity.test.ts`
@@ -137,6 +143,23 @@ dinosaurs walk a smooth curve. Terrain polygons drive placement rules, the
 line-of-sight test.
 
 Adding a map means adding one file and one entry in `src/game/data/maps/index.ts`.
+
+### Simulation time
+
+Phaser's `scene.time.now` is raw wall-clock time: it ignores `timeScale` and
+keeps running while the game is paused. Gameplay therefore does not use it.
+
+`SimulationClock` is the authoritative gameplay clock. It advances only by the
+scaled simulation delta, so one second of simulation means the same thing at
+every speed and a pause costs exactly zero of it. Every gameplay deadline reads
+from it — attack cooldowns, burn, slow, stun, sprint cadence, aura refreshes,
+fixture lifetimes, hero cooldowns, wave scheduling — and gameplay callbacks
+that need a delay (the Skyhook Strike's strafing run) are queued on it rather
+than on a Phaser timer, so they obey pause and speed and are dropped when a
+match ends.
+
+Phaser's tweens and particles still run on Phaser's own clock. They are
+presentation, and they never decide an outcome.
 
 ### Progression and saves
 
@@ -190,19 +213,37 @@ stored in the player's browser.
 ## Testing
 
 ```bash
-npm test
+npm test        # 199 written it() declarations, 229 executed cases
+npm run test:e2e   # 10 browser tests against the production build
 ```
 
-The suite covers the parts where a mistake is expensive and invisible: damage
-and armour maths, tier scaling, reward and star rules, unlock legality, save
-migration, placement eligibility on every map, line-of-sight geometry, wave
-composition and challenge modifiers, and the integrity of the balance tables
-themselves.
+The unit suite covers the parts where a mistake is expensive and invisible:
+damage and armour maths, tier scaling, reward and star rules, unlock legality,
+save migration, placement eligibility on every map, line-of-sight geometry,
+wave composition and challenge modifiers, the end-of-match reducer, and the
+integrity of the balance tables themselves.
 
-Browser behaviour was verified by driving the built game with Playwright —
-full playthroughs including a boss wave, hero deployment and upgrades, and
-direct checks that water, lava and line-of-sight rules behave in the running
-game as they do in the unit tests.
+`tests/dataIntegrity.test.ts` parameterises ten of its declarations over the
+four maps, which is why Vitest reports more cases than there are `it()` calls.
+
+`tests/simulationTiming.test.ts` drives the real `Dino`, `DefenderUnit` and
+`CombatSystem` headlessly and asserts the core guarantee: **2x and 3x run the
+same simulation faster.** A given amount of simulation time produces the same
+shots, distance, burn damage, status durations and cooldown completions no
+matter how much wall-clock time was spent on it, and a pause consumes none of
+it.
+
+`npm run test:e2e` builds the game, serves it, and drives Chromium through the
+seams unit tests cannot reach: entering a match, placing a defender, starting a
+wave, pausing, abandoning, and reloading with progression intact. A fresh
+machine needs `npx playwright install chromium` once.
+
+### The test bridge
+
+Browser tests need to see the simulation clock itself, so a match publishes a
+small read-only snapshot to `window.__ctdTest` — but **only** when the page is
+opened with `?e2e=1`. It exposes no way to mutate state, grant resources or
+skip content, and a test asserts it is absent during normal play.
 
 ---
 

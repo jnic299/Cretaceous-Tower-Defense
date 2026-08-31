@@ -3,16 +3,27 @@ import type { PlayerProfile } from '../persistence/schema';
 import { computeRewards } from './rewards';
 import { emptyMapResult } from './profile';
 
+export interface MatchCompletionOptions {
+  /**
+   * Set when the run that just ended was the guided first match. Folded into
+   * the same transition as the rewards so it cannot be overwritten by a
+   * separate profile write landing afterwards.
+   */
+  completedTutorial?: boolean;
+}
+
 /**
  * Folds a finished match into a profile. Pure: takes a profile and a result,
  * returns the new profile plus the result enriched with what was actually
- * awarded. Keeping it pure is what makes the reward rules testable.
+ * awarded. Keeping it pure is what makes the reward rules testable, and
+ * keeping it a *single* transition is what makes end-of-match state safe.
  */
 export function applyMatchResult(
   profile: PlayerProfile,
   result: MatchResult,
   map: MapDef,
   challenge?: ChallengeDef,
+  options: MatchCompletionOptions = {},
 ): { profile: PlayerProfile; result: MatchResult } {
   const challengeDone = challenge ? profile.challengeResults[challenge.id]?.completed === true : false;
 
@@ -79,8 +90,12 @@ export function applyMatchResult(
       losses: profile.stats.losses + (result.victory ? 0 : 1),
       bosses: profile.stats.bosses + result.bossesDefeated,
       amberEarned: profile.stats.amberEarned + rewards.amber,
+      supplySpent: profile.stats.supplySpent + Math.max(0, result.supplySpent ?? 0),
+      unitsPlaced: profile.stats.unitsPlaced + Math.max(0, result.unitsPlaced ?? 0),
+      upgrades: profile.stats.upgrades + Math.max(0, result.upgradesPurchased ?? 0),
       playTimeMs: profile.stats.playTimeMs + result.durationMs,
     },
+    tutorialCompleted: profile.tutorialCompleted || options.completedTutorial === true,
     lastMapId: map.id,
     updatedAt: Date.now(),
   };

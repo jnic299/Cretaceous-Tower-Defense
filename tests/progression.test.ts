@@ -10,6 +10,7 @@ import type { MatchResult } from '../src/game/types';
 function result(over: Partial<MatchResult> = {}): MatchResult {
   return {
     mapId: RESEARCH_OUTPOST.id,
+    endReason: 'victory',
     victory: true,
     stars: 0,
     objectiveHpRemaining: 100,
@@ -19,6 +20,9 @@ function result(over: Partial<MatchResult> = {}): MatchResult {
     kills: 180,
     bossesDefeated: 1,
     supplyEarned: 900,
+    supplySpent: 640,
+    unitsPlaced: 11,
+    upgradesPurchased: 4,
     amberEarned: 0,
     amberBreakdown: [],
     durationMs: 600_000,
@@ -158,7 +162,7 @@ describe('applyMatchResult', () => {
     const profile = createProfile();
     const { profile: next } = applyMatchResult(
       profile,
-      result({ victory: false, objectiveHpRemaining: 0, wavesCleared: 4, bossesDefeated: 0 }),
+      result({ endReason: 'defeat', victory: false, objectiveHpRemaining: 0, wavesCleared: 4, bossesDefeated: 0 }),
       RESEARCH_OUTPOST,
     );
     expect(next.mapResults[RESEARCH_OUTPOST.id].cleared).toBe(false);
