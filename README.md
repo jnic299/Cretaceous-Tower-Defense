@@ -213,7 +213,7 @@ stored in the player's browser.
 ## Testing
 
 ```bash
-npm test        # 199 written it() declarations, 229 executed cases
+npm test        # 214 written it() declarations, 244 executed cases
 npm run test:e2e   # 11 browser tests against the production build
 ```
 

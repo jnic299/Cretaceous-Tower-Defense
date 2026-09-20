@@ -188,6 +188,77 @@ function Weapon({ art }: { art: UnitArtSpec }) {
           <circle cx="-2" cy="0" r="4.6" fill={a} />
         </g>
       );
+    case 'beacon':
+      return (
+        <g>
+          {/* Bracing struts and heat vanes. */}
+          {[-1, 1].map((sgn) => (
+            <g key={sgn}>
+              <path
+                d={`M-16 ${sgn * 4} L-4 ${sgn * 15} L2 ${sgn * 12} L-10 ${sgn * 2} Z`}
+                fill={shade(art.metal, -0.25)}
+                stroke={md}
+                strokeWidth="1.2"
+              />
+              {[0, 1, 2].map((i) => (
+                <rect
+                  key={i}
+                  x={-13 + i * 6}
+                  y={sgn * 9 - 1.5}
+                  width="4"
+                  height="3"
+                  rx="1"
+                  fill={shade(art.accent, -0.35)}
+                />
+              ))}
+            </g>
+          ))}
+          {/* Emitter drum. */}
+          <rect x="-18" y="-11" width="26" height="22" rx="7" fill={css(art.body)} stroke={md} strokeWidth="2" />
+          <rect x="-14" y="-7" width="17" height="14" rx="5" fill={shade(art.body, 0.2)} />
+          {[0, 1, 2].map((i) => (
+            <path key={i} d={`M${-13 + i * 5} -5 L${-9 + i * 5} 0 L${-13 + i * 5} 5 Z`} fill={a} opacity="0.85" />
+          ))}
+          {/* Stepped horn. */}
+          {[0, 1, 2].map((i) => {
+            const half = 10 - i * 2.4;
+            return (
+              <rect
+                key={i}
+                x={6 + i * 5}
+                y={-half}
+                width="5.5"
+                height={half * 2}
+                rx="2"
+                fill={shade(art.metal, 0.06 - i * 0.08)}
+                stroke={md}
+                strokeWidth="1.1"
+              />
+            );
+          })}
+          {/* Lens and signal bands. */}
+          <circle cx="22" cy="0" r="4.8" fill={shade(art.accent, -0.2)} />
+          <circle cx="22" cy="0" r="2.4" fill={shade(art.accent, 0.45)} />
+          {[0, 1, 2].map((i) => {
+            const r = 9 + i * 6.5;
+            const dy = Math.sin(0.95) * r;
+            const dx = Math.cos(0.95) * r;
+            return (
+              <path
+                key={r}
+                d={`M${22 + dx} ${-dy} A${r} ${r} 0 0 1 ${22 + dx} ${dy}`}
+                fill="none"
+                stroke={a}
+                strokeWidth={2.6 - i * 0.35}
+                strokeLinecap="round"
+                opacity={0.9 - i * 0.16}
+              />
+            );
+          })}
+          {/* Capacitor cell. */}
+          <rect x="-26" y="-2" width="8" height="4" rx="1.6" fill={shade(art.metal, -0.15)} stroke={md} strokeWidth="1" />
+        </g>
+      );
     default:
       return null;
   }

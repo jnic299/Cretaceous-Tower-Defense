@@ -6,6 +6,10 @@ import type { DefenderDef } from '../types';
  *
  * `levels[0].cost` mirrors `cost` (the deploy price); levels 2 and 3 are the
  * in-match upgrade prices.
+ *
+ * Array order is the order the armory lists them in, so it doubles as the
+ * recommended purchase order. River Patrol sits second because Delta Wetlands
+ * has water lanes no land unit can cover.
  */
 export const DEFENDERS: DefenderDef[] = [
   {
@@ -56,6 +60,72 @@ export const DEFENDERS: DefenderDef[] = [
           armorPierce: 0.4,
           pierceCount: 1,
           visual: 'dart',
+        },
+      },
+    ],
+  },
+
+  {
+    id: 'riverPatrol',
+    name: 'River Patrol',
+    title: 'Waterborne Gunner',
+    category: 'defender',
+    role: 'Shoreline control',
+    description:
+      'Shallow-draft patrol boat with a deck-mounted repeater. Deploys only onto water, and covers lanes nothing on land can reach.',
+    flavor: 'Officially a survey vessel. The survey equipment is belt-fed.',
+    cost: 110,
+    unlockCost: 200,
+    terrain: 'water',
+    footprint: 27,
+    defaultTargeting: 'first',
+    targetModes: ['first', 'strongest', 'closest', 'last'],
+    strengths: ['Long reach along shorelines', 'Rounds carry through lined-up targets', 'Covers ground nothing else can'],
+    weaknesses: ['Water placement only', 'Useless on dry maps', 'Exposed on open river bends'],
+    art: { body: 0x2f5468, accent: 0xe4e9ec, metal: 0x8d949c, weapon: 'boat', chassis: 'vehicle' },
+    levels: [
+      {
+        cost: 110,
+        range: 212,
+        damage: 21,
+        fireRate: 1.3,
+        note: 'Deck repeater. Rounds carry through one target.',
+        attack: {
+          pattern: 'projectile',
+          damageType: 'kinetic',
+          projectileSpeed: 700,
+          pierceCount: 1,
+          visual: 'bullet',
+        },
+      },
+      {
+        cost: 130,
+        range: 232,
+        damage: 30,
+        fireRate: 1.45,
+        note: 'Heavier receiver, longer reach.',
+        attack: {
+          pattern: 'projectile',
+          damageType: 'kinetic',
+          projectileSpeed: 760,
+          pierceCount: 1,
+          armorPierce: 0.2,
+          visual: 'bullet',
+        },
+      },
+      {
+        cost: 230,
+        range: 258,
+        damage: 44,
+        fireRate: 1.6,
+        note: 'Twin mount that rakes a whole lane.',
+        attack: {
+          pattern: 'projectile',
+          damageType: 'kinetic',
+          projectileSpeed: 820,
+          pierceCount: 2,
+          armorPierce: 0.35,
+          visual: 'bullet',
         },
       },
     ],
@@ -422,72 +492,6 @@ export const DEFENDERS: DefenderDef[] = [
           damageType: 'kinetic',
           projectileSpeed: 540,
           buff: { radius: 170, fireRateMultiplier: 1.4, damageMultiplier: 1.2, rangeMultiplier: 1.1, targets: 'all' },
-          visual: 'bullet',
-        },
-      },
-    ],
-  },
-
-  {
-    id: 'riverPatrol',
-    name: 'River Patrol',
-    title: 'Waterborne Gunner',
-    category: 'defender',
-    role: 'Shoreline control',
-    description:
-      'Shallow-draft patrol boat with a deck-mounted repeater. Deploys only onto water, and covers lanes nothing on land can reach.',
-    flavor: 'Officially a survey vessel. The survey equipment is belt-fed.',
-    cost: 110,
-    unlockCost: 280,
-    terrain: 'water',
-    footprint: 27,
-    defaultTargeting: 'first',
-    targetModes: ['first', 'strongest', 'closest', 'last'],
-    strengths: ['Long reach along shorelines', 'Rounds carry through lined-up targets', 'Covers ground nothing else can'],
-    weaknesses: ['Water placement only', 'Useless on dry maps', 'Exposed on open river bends'],
-    art: { body: 0x2f5468, accent: 0xe4e9ec, metal: 0x8d949c, weapon: 'boat', chassis: 'vehicle' },
-    levels: [
-      {
-        cost: 110,
-        range: 212,
-        damage: 21,
-        fireRate: 1.3,
-        note: 'Deck repeater. Rounds carry through one target.',
-        attack: {
-          pattern: 'projectile',
-          damageType: 'kinetic',
-          projectileSpeed: 700,
-          pierceCount: 1,
-          visual: 'bullet',
-        },
-      },
-      {
-        cost: 130,
-        range: 232,
-        damage: 30,
-        fireRate: 1.45,
-        note: 'Heavier receiver, longer reach.',
-        attack: {
-          pattern: 'projectile',
-          damageType: 'kinetic',
-          projectileSpeed: 760,
-          pierceCount: 1,
-          armorPierce: 0.2,
-          visual: 'bullet',
-        },
-      },
-      {
-        cost: 230,
-        range: 258,
-        damage: 44,
-        fireRate: 1.6,
-        note: 'Twin mount that rakes a whole lane.',
-        attack: {
-          pattern: 'projectile',
-          damageType: 'kinetic',
-          projectileSpeed: 820,
-          pierceCount: 2,
-          armorPierce: 0.35,
           visual: 'bullet',
         },
       },

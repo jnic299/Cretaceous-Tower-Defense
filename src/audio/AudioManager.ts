@@ -15,6 +15,7 @@ export type SoundId =
   | 'spikeRing'
   | 'flame'
   | 'tesla'
+  | 'broadcast'
   | 'frost'
   | 'mortar'
   | 'explosion'
@@ -186,7 +187,7 @@ export class AudioManager {
 
     // Rate-limit the noisiest cues so a big wave stays listenable.
     const now = performance.now();
-    const gap = id === 'shotLight' || id === 'flame' ? 55 : id === 'shot' ? 32 : 0;
+    const gap = id === 'shotLight' || id === 'flame' ? 55 : id === 'shot' ? 32 : id === 'broadcast' ? 90 : 0;
     if (gap > 0) {
       const last = this.lastPlayedAt.get(id) ?? 0;
       if (now - last < gap) return;
@@ -228,6 +229,14 @@ export class AudioManager {
         this.noise(0.12, 0.2 * v, 'highpass', 3400, 1600);
         this.tone('square', 1500, 420, 0.1, 0.09 * v);
         this.tone('square', 2100, 640, 0.07, 0.06 * v, 0.03);
+        break;
+      case 'broadcast':
+        // Three stacked chirps, one per arc layer, over a short carrier sweep.
+        [880, 1240, 1660].forEach((f, i) =>
+          this.tone('sine', f, f * 1.9, 0.12, (0.08 - i * 0.018) * v, i * 0.035),
+        );
+        this.tone('sawtooth', 300, 120, 0.16, 0.07 * v);
+        this.noise(0.14, 0.1 * v, 'bandpass', 3000, 1200);
         break;
       case 'frost':
         this.noise(0.24, 0.16 * v, 'highpass', 5200, 2000);

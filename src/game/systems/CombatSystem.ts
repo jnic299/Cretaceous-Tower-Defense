@@ -1,9 +1,9 @@
 import type Phaser from 'phaser';
-import type { AttackSpec, DamageType, SlowSpec, StunSpec, BurnSpec } from '../types';
+import type { AttackSpec, DamageType, LureSpec, SlowSpec, StunSpec, BurnSpec } from '../types';
 import type { Dino } from '../entities/Dino';
 import type { DefenderUnit, HeroUnit, PlacedUnit } from '../entities/PlacedUnit';
 import type { FixtureUnit } from '../entities/Fixture';
-import type { MapGeometry } from './MapGeometry';
+import type { MapGeometry, PathRuntime } from './MapGeometry';
 import type { SpatialGrid } from './SpatialGrid';
 import type { EffectsSystem } from './EffectsSystem';
 import type { Projectile, ProjectileSystem } from './ProjectileSystem';
@@ -68,8 +68,18 @@ const AURA_INTERVAL = 400;
 export class CombatSystem {
   private scratch: Dino[] = [];
   private chainScratch: Dino[] = [];
+  private lureScratch: Dino[] = [];
   private nextAuraAt = 0;
   private auraDirty = true;
+
+  /**
+   * Arc-length position of the lure emitter projected onto each path. Only
+   * recomputed when the emitter actually moves, which is once per redeploy.
+   */
+  private readonly lureAnchors = new Map<PathRuntime, number>();
+  private lureAnchorX = Number.NaN;
+  private lureAnchorY = Number.NaN;
+  private readonly luredHeld: Dino[] = [];
 
   dinos: Dino[] = [];
   defenders: DefenderUnit[] = [];
@@ -114,6 +124,7 @@ export class CombatSystem {
 
     for (const unit of this.defenders) this.updateUnit(unit, now, deltaMs);
     if (this.hero) this.updateHero(this.hero, now, deltaMs);
+    else if (this.luredHeld.length > 0) this.releaseLured(now);
 
     this.updateFixtures(now, deltaMs);
     this.tickBurns(now, deltaMs);
@@ -230,6 +241,10 @@ export class CombatSystem {
     const range = hero.effectiveRange;
     const ignoreLos = attack.pattern === 'lob';
 
+    // The lure runs on its own duty cycle rather than on the firing loop, so
+    // a beacon that cannot see anything still lets its captives go free.
+    if (attack.lure) this.updateLure(hero, attack.lure, now, deltaMs);
+
     if (!this.targetStillValid(hero, hero.target, range, attack.minRange ?? 0, ignoreLos)) {
       hero.target = this.acquire(hero, range, attack.minRange ?? 0, ignoreLos, hero.targetMode);
     }
@@ -254,6 +269,95 @@ export class CombatSystem {
         this.fire(hero, close, secondary.attack, secondary.damage * hero.buffs.damage, secondary.range, true);
       }
     }
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Lure field                                                          */
+  /* ------------------------------------------------------------------ */
+
+  /**
+   * Holds the nearest few animals at the emitter and drags anything that got
+   * past it back down the path. Two hard limits keep this from being a wall:
+   * `steadfast` animals (heavies and every boss) ignore it outright, and only
+   * `capacity` animals can be held at once — a big enough pack simply walks
+   * through the ones being held.
+   */
+  private updateLure(hero: HeroUnit, lure: LureSpec, now: number, deltaMs: number): void {
+    // Last frame's captives are released before anything else. Holds are only
+    // ever one frame long, so whatever does not make this frame's cut starts
+    // walking again — that is what keeps `capacity` honest frame to frame
+    // rather than letting the held set grow over a broadcast window.
+    this.releaseLured(now);
+
+    // Phase is taken from the unit's *base* fire rate, not the buffed one, so
+    // the window an animal gets to walk in cannot be buffed away.
+    const period = 1000 / Math.max(0.1, hero.def.fireRate);
+    if ((now % period) / period >= lure.dutyCycle) return;
+
+    const near = this.deps.grid.queryCircle(hero.x, hero.y, lure.radius, this.lureScratch);
+    if (near.length === 0) return;
+
+    const candidates: { d: Dino; dSq: number }[] = [];
+    for (const d of near) {
+      if (!d.alive || d.species.traits.includes('steadfast')) continue;
+      candidates.push({ d, dSq: (d.x - hero.x) ** 2 + (d.y - hero.y) ** 2 });
+    }
+    if (candidates.length === 0) return;
+    candidates.sort((a, b) => a.dSq - b.dSq);
+
+    // Long enough to cover the next frame at any game speed, short enough that
+    // a released animal is walking again almost immediately.
+    const hold = deltaMs * 2 + 8;
+    const pull = (lure.pullSpeed * deltaMs) / 1000;
+
+    for (let i = 0; i < candidates.length && i < lure.capacity; i++) {
+      const d = candidates[i].d;
+      d.heldUntil = Math.max(d.heldUntil, now + hold);
+      this.luredHeld.push(d);
+
+      // Anything that slipped past the emitter gets dragged back to it.
+      const anchor = this.lureAnchorFor(d.path, hero.x, hero.y);
+      const delta = anchor - d.progress;
+      if (delta < -1) d.progress = Math.max(0, d.progress + Math.max(delta, -pull));
+    }
+  }
+
+  /**
+   * Ends the hold on everything the emitter caught last frame. A decoy beacon
+   * covering the same ground re-applies its own hold later in the same update,
+   * so this cannot cancel another source's effect.
+   */
+  private releaseLured(now: number): void {
+    for (const d of this.luredHeld) {
+      if (d.heldUntil > now) d.heldUntil = now;
+    }
+    this.luredHeld.length = 0;
+  }
+
+  /** Arc length along `path` of the point closest to the emitter. */
+  private lureAnchorFor(path: PathRuntime, x: number, y: number): number {
+    if (x !== this.lureAnchorX || y !== this.lureAnchorY) {
+      this.lureAnchors.clear();
+      this.lureAnchorX = x;
+      this.lureAnchorY = y;
+    }
+    const cached = this.lureAnchors.get(path);
+    if (cached !== undefined) return cached;
+
+    // The polyline is resampled every few pixels, so the nearest vertex is a
+    // good enough anchor and costs one scan per path per redeploy.
+    let best = 0;
+    let bestSq = Infinity;
+    for (let i = 0; i < path.points.length; i++) {
+      const p = path.points[i];
+      const dSq = (p.x - x) ** 2 + (p.y - y) ** 2;
+      if (dSq < bestSq) {
+        bestSq = dSq;
+        best = path.cumulative[i];
+      }
+    }
+    this.lureAnchors.set(path, best);
+    return best;
   }
 
   /** Predicts where a moving target will be when the shot arrives. */
@@ -358,6 +462,38 @@ export class CombatSystem {
         }
         effects.flameCone(unit.x, unit.y, angle, range, half * 2);
         if (struck > 0) audio.play('flame', { volume: 0.22 });
+        break;
+      }
+
+      case 'pulse': {
+        // A fan of concentric laser arcs sweeping out from the emitter. The
+        // arc is wide enough to cover anything the lure dragged in, with a
+        // blind wedge directly behind the housing.
+        const angle = Math.atan2(target.y - unit.y, target.x - unit.x);
+        const spread = Math.min(Math.PI * 2, ((attack.coneAngle ?? 260) * Math.PI) / 180);
+        const half = spread / 2;
+        const near = this.deps.grid.queryCircle(unit.x, unit.y, range, this.scratch);
+        let struck = 0;
+        for (const d of near) {
+          if (!d.alive) continue;
+          if (half < Math.PI) {
+            const da = Math.atan2(d.y - unit.y, d.x - unit.x);
+            let delta = Math.abs(da - angle) % (Math.PI * 2);
+            if (delta > Math.PI) delta = Math.PI * 2 - delta;
+            if (delta > half) continue;
+          }
+          if (!this.deps.geometry.hasLineOfSight(unit.x, unit.y, d.x, d.y)) continue;
+          this.applyDamage(
+            d,
+            damage,
+            attack.damageType,
+            { armorPierce: attack.armorPierce, slow: attack.slow, stun: attack.stun, quiet: near.length > 6 },
+            unit,
+          );
+          struck++;
+        }
+        effects.broadcastArcs(unit.x, unit.y, angle, range, spread, BEAM_COLORS[attack.damageType]);
+        if (struck > 0) audio.play('broadcast', { volume: 0.32 });
         break;
       }
 

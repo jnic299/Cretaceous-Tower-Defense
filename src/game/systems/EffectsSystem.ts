@@ -185,6 +185,56 @@ export class EffectsSystem {
     });
   }
 
+  /**
+   * The Distract-o-matic's pulse: four nested arcs sweeping out from the
+   * emitter, drawn the way a signal-strength icon stacks its bands. Each layer
+   * starts tighter and brighter and expands to the weapon's full reach.
+   */
+  broadcastArcs(x: number, y: number, angle: number, range: number, spread: number, color = 0x9be8ff): void {
+    const layers = 4;
+    const half = spread / 2;
+    for (let i = 0; i < layers; i++) {
+      const g = this.scene.add
+        .graphics({ x, y })
+        .setDepth(DEPTH.effect)
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setAlpha(0.9 - i * 0.14);
+      const inner = range * (0.3 + i * 0.14);
+      g.lineStyle(5 - i * 0.7, color, 1);
+      g.beginPath();
+      g.arc(0, 0, inner, angle - half, angle + half, false);
+      g.strokePath();
+      // Each band grows outward and fades, so the four read as one wave front.
+      this.scene.tweens.add({
+        targets: g,
+        scale: range / inner,
+        alpha: 0,
+        duration: 240 + i * 55,
+        delay: i * 32,
+        ease: 'Cubic.easeOut',
+        onComplete: () => g.destroy(),
+      });
+    }
+
+    // Emitter flare at the hub.
+    const core = this.scene.add
+      .image(x, y, FX.ring)
+      .setDepth(DEPTH.effect)
+      .setTint(color)
+      .setScale(0.08)
+      .setAlpha(0.85)
+      .setBlendMode(Phaser.BlendModes.ADD);
+    this.scene.tweens.add({
+      targets: core,
+      scale: 0.34,
+      alpha: 0,
+      duration: 200,
+      ease: 'Cubic.easeOut',
+      onComplete: () => core.destroy(),
+    });
+    this.sparks.emitParticleAt(x + Math.cos(angle) * 18, y + Math.sin(angle) * 18, 2);
+  }
+
   /* ---- Impacts ------------------------------------------------------ */
 
   impact(x: number, y: number, type: DamageType): void {

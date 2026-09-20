@@ -518,6 +518,12 @@
   max-width: 68px;
   text-align: center;
   line-height: 1.15;
+  /* A three-line ability name spills out of the round button, so clamp it —
+     the full name and description are on the button's tooltip either way. */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   overflow: hidden;
 }
 .hero-action--move {

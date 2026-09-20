@@ -167,6 +167,22 @@ describe('defenders and turrets', () => {
   });
 });
 
+describe('armory ordering', () => {
+  it('leads with the starter and the unit Delta Wetlands needs', () => {
+    // The armory renders `DEFENDERS` in order, and the grid is three columns
+    // at its narrowest, so the first row is the first three entries.
+    const firstRow = DEFENDERS.slice(0, 3).map((d) => d.id);
+    expect(firstRow[0]).toBe('ranger');
+    expect(firstRow).toContain('riverPatrol');
+  });
+
+  it('prices the water unit as an early purchase', () => {
+    const river = DEFENDERS.find((d) => d.id === 'riverPatrol')!;
+    const paid = DEFENDERS.filter((d) => d.unlockCost > 0).map((d) => d.unlockCost);
+    expect(river.unlockCost).toBe(Math.min(...paid));
+  });
+});
+
 describe('heroes', () => {
   it('has at least three, one of them free', () => {
     expect(HEROES.length).toBeGreaterThanOrEqual(3);
@@ -189,6 +205,38 @@ describe('heroes', () => {
     );
     for (const h of HEROES) {
       expect(h.damage * h.fireRate, h.id).toBeGreaterThan(bestDefenderDps);
+    }
+  });
+
+  it('keeps one clearly cheapest hero for a player to buy first', () => {
+    const paid = HEROES.filter((h) => h.unlockCost > 0).sort((a, b) => a.unlockCost - b.unlockCost);
+    expect(paid.length).toBeGreaterThan(1);
+    // A tie would leave no obvious first purchase on the armory page.
+    expect(paid[0].unlockCost).toBeLessThan(paid[1].unlockCost);
+    // And the cheapest to unlock should also be the cheapest to field.
+    expect(paid[0].deployCost).toBe(Math.min(...HEROES.map((h) => h.deployCost)));
+  });
+
+  it('gives every pulse weapon an arc to sweep', () => {
+    for (const h of HEROES) {
+      if (h.attack.pattern !== 'pulse') continue;
+      expect(h.attack.coneAngle, h.id).toBeGreaterThan(0);
+      expect(h.attack.coneAngle, h.id).toBeLessThanOrEqual(360);
+    }
+  });
+
+  it('keeps every lure field inside the weapon it feeds', () => {
+    for (const h of HEROES) {
+      const lure = h.attack.lure;
+      if (!lure) continue;
+      // Anything the field pins must be somewhere the pulse can reach.
+      expect(lure.radius, h.id).toBeGreaterThan(0);
+      expect(lure.radius, h.id).toBeLessThanOrEqual(h.range);
+      // A duty cycle of 1 would stop animals for good.
+      expect(lure.dutyCycle, h.id).toBeGreaterThan(0);
+      expect(lure.dutyCycle, h.id).toBeLessThan(1);
+      expect(lure.capacity, h.id).toBeGreaterThanOrEqual(1);
+      expect(lure.pullSpeed, h.id).toBeGreaterThan(0);
     }
   });
 

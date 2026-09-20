@@ -53,6 +53,50 @@ export const HEROES: HeroDef[] = [
   },
 
   {
+    id: 'distractomatic',
+    name: 'The Distract-o-matic 3000',
+    title: 'Autonomous Lure Beacon',
+    description:
+      'A walking broadcast pylon that shouts across every frequency a dinosaur cares about. Animals stop to argue with it, and the emitter stack answers with a fan of laser arcs.',
+    flavor: 'Field manual, page one: the unit is not designed to be liked.',
+    unlockCost: 210,
+    deployCost: 140,
+    terrain: 'land',
+    footprint: 30,
+    range: 200,
+    damage: 34,
+    fireRate: 1.4,
+    defaultTargeting: 'closest',
+    attack: {
+      pattern: 'pulse',
+      damageType: 'shock',
+      coneAngle: 260,
+      lure: { radius: 185, dutyCycle: 0.55, pullSpeed: 110, capacity: 5 },
+      visual: 'broadcast',
+    },
+    ability: {
+      id: 'fullSpectrumBroadcast',
+      name: 'Full-Spectrum Broadcast',
+      description:
+        'Dumps the entire capacitor bank into one unshielded bloom. Everything around the pylon is pinned where it stands and cooked by the arcs.',
+      cooldownMs: 24000,
+      kind: 'self',
+      radius: 235,
+      damage: 170,
+      damageType: 'shock',
+      stun: { durationMs: 1200, chance: 1 },
+      visual: 'broadcast',
+    },
+    repositionCooldownMs: 10000,
+    art: { body: 0x35505c, accent: 0x6fd8e8, metal: 0x9aa3ad, weapon: 'beacon', chassis: 'machine', scale: 1.18 },
+    strengths: [
+      'The cheapest hero you can buy, and the cheapest of any to field',
+      'Holds the five nearest animals at the pylon instead of on your objective',
+      'Every pulse washes almost the full circle, so lured packs all take it at once',
+    ],
+  },
+
+  {
     id: 'halcyon',
     name: 'Halcyon',
     title: 'Ranger Commander',
@@ -83,7 +127,7 @@ export const HEROES: HeroDef[] = [
     },
     repositionCooldownMs: 9000,
     art: { body: 0x3f5b45, accent: 0xe8d9a0, metal: 0x767d84, weapon: 'rifle', chassis: 'human', hat: 'cap' },
-    strengths: ['Best sustained single-target damage of the three', 'Ability covers a lane on demand', 'Cheap to redeploy'],
+    strengths: ['Best sustained single-target damage of any hero', 'Ability covers a lane on demand', 'Cheap to redeploy'],
   },
 
   {

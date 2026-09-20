@@ -345,6 +345,72 @@ function drawWeapon(
       g.fillCircle(x + 11, y - 4.5, 1.3);
       break;
     }
+    case 'beacon': {
+      // The Decoy Beacon grown up: an armoured emitter drum on a braced
+      // pylon, throwing a stack of signal bands out of its muzzle.
+      const bands = 3 + L;
+
+      // Bracing struts, drawn first so the drum sits on top of them.
+      for (const sgn of [-1, 1]) {
+        poly(
+          g,
+          [
+            { x: x - 16, y: y + sgn * 4 },
+            { x: x - 4, y: y + sgn * 15 },
+            { x: x + 2, y: y + sgn * 12 },
+            { x: x - 10, y: y + sgn * 2 },
+          ],
+          shade(m, -0.25),
+          mo,
+          1.4,
+        );
+        // Heat vanes.
+        for (let i = 0; i < 3; i++) {
+          panel(g, x - 13 + i * 6, y + sgn * 9 - 1.5, 4, 3, 1, shade(acc, -0.35), mo, 0.8);
+        }
+      }
+
+      // Emitter drum.
+      panel(g, x - 18, y - 11, 26, 22, 7, art.body, outline(art.body), 2.4);
+      panel(g, x - 14, y - 7, 17, 14, 5, shade(art.body, 0.2), undefined, 0);
+      // Hazard chevrons down the flank.
+      for (let i = 0; i < 3; i++) {
+        g.fillStyle(acc, 0.85);
+        g.fillTriangle(x - 13 + i * 5, y - 5, x - 9 + i * 5, y, x - 13 + i * 5, y + 5);
+      }
+
+      // Stepped horn: three collars narrowing toward the muzzle.
+      for (let i = 0; i < 3; i++) {
+        const half = 10 - i * 2.4;
+        panel(g, x + 6 + i * 5, y - half, 5.5, half * 2, 2, shade(m, 0.06 - i * 0.08), mo, 1.3);
+      }
+
+      // Emitter lens.
+      g.fillStyle(shade(acc, -0.2), 1);
+      g.fillCircle(x + 22, y, 4.6 + L * 0.4);
+      g.fillStyle(shade(acc, 0.45), 1);
+      g.fillCircle(x + 22, y, 2.4);
+      g.fillStyle(0xffffff, 0.9);
+      g.fillCircle(x + 21, y - 1, 1);
+
+      // Signal bands: nested arcs stepping out from the lens, brightest and
+      // thickest nearest the emitter. This is the shape the pulse fires.
+      for (let i = 0; i < bands; i++) {
+        const r = 9 + i * 6.5;
+        g.lineStyle(2.6 - i * 0.35, acc, 0.9 - i * 0.16);
+        g.beginPath();
+        g.arc(x + 22, y, r, -0.95, 0.95, false);
+        g.strokePath();
+      }
+
+      // Capacitor bank on the tail, one cell per level.
+      for (let i = 0; i <= L; i++) {
+        panel(g, x - 26, y - 7 + i * 5, 8, 4, 1.6, shade(m, -0.15), mo, 1);
+        g.fillStyle(acc, 0.9);
+        g.fillCircle(x - 22, y - 5 + i * 5, 1.3);
+      }
+      break;
+    }
     case 'exo': {
       // Powered frame: heavy pauldrons and a forearm cannon.
       panel(g, x - 14, y - 14, 26, 28, 8, art.body, outline(art.body), 2.4);

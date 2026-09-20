@@ -619,8 +619,16 @@ export class MatchScene extends Phaser.Scene {
     g.fillCircle(x, y, range);
     g.lineStyle(2, ok ? 0x8de89a : 0xff7a6b, 0.75);
     g.strokeCircle(x, y, range);
-    g.lineStyle(1, ok ? 0xffffff : 0xff7a6b, 0.25);
-    g.strokeCircle(x, y, range * 0.66);
+    const lure = isHeroCard ? (def as HeroDef).attack.lure : undefined;
+    if (lure) {
+      // Placement for a lure emitter is all about where the field lands, so
+      // it gets its own ring rather than the generic inner guide.
+      g.lineStyle(2, 0xffbf47, 0.6);
+      g.strokeCircle(x, y, lure.radius);
+    } else {
+      g.lineStyle(1, ok ? 0xffffff : 0xff7a6b, 0.25);
+      g.strokeCircle(x, y, range * 0.66);
+    }
   }
 
   private handleClick(worldX: number, worldY: number): void {
@@ -801,6 +809,12 @@ export class MatchScene extends Phaser.Scene {
     g.lineStyle(2, 0x9be8ff, 0.7);
     g.strokeCircle(sel.x, sel.y, range);
 
+    const lureField = sel === this.hero ? this.hero.def.attack.lure : undefined;
+    if (lureField) {
+      g.lineStyle(2, 0xffbf47, 0.6);
+      g.strokeCircle(sel.x, sel.y, lureField.radius);
+    }
+
     // Show the firing line to the current target so blocked shots are legible.
     const target = 'target' in sel ? (sel as DefenderUnit).target : null;
     if (target && target.alive) {
@@ -903,6 +917,27 @@ export class MatchScene extends Phaser.Scene {
         );
         this.effects.shake(0.009, 400);
         this.effects.flashScreen(0xffd166, 0.18, 260);
+        break;
+      }
+      case 'broadcast': {
+        // Overdriven pylon: the full circle, every band at once.
+        this.effects.broadcastArcs(hero.x, hero.y, 0, radius, Math.PI * 2, 0x9be8ff);
+        this.clock.schedule(120, () => {
+          if (this.ended) return;
+          this.effects.broadcastArcs(hero.x, hero.y, 0, radius * 0.82, Math.PI * 2, 0xdff6ff);
+        });
+        this.combat.detonate(
+          hero.x,
+          hero.y,
+          radius,
+          damage,
+          0.35,
+          type,
+          { stun: ability.stun },
+          hero,
+        );
+        this.effects.shake(0.006, 320);
+        this.effects.flashScreen(0x9be8ff, 0.16, 240);
         break;
       }
       default: {

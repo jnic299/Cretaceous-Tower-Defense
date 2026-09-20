@@ -25,9 +25,10 @@ survives a page refresh.
 - Per-animal lane offsets and speed variance, so a wave reads as a herd
 - Walk-cycle animation driven by distance travelled — slowed animals visibly
   slow their gait
-- Six attack patterns: projectile, radial, cone, hitscan, chain, lobbed
+- Seven attack patterns: projectile, radial, cone, hitscan, chain, lobbed,
+  pulse (a stationary arc sweep)
 - Armour as flat reduction with a damage floor, plus per-weapon armour piercing
-- Status effects: burn (ignores armour), slow, stun, knockback
+- Status effects: burn (ignores armour), slow, stun, knockback, lure
 - Splash with linear falloff; chain arcs with per-jump decay
 - Line-of-sight rejection against map geometry, bounding-box pre-pass, with
   lobbed weapons deliberately exempt
@@ -41,7 +42,7 @@ survives a page refresh.
 **Content**
 - Four maps: Research Outpost, Delta Wetlands, Caldera Station, Fossil Canyon
 - Ten species across five durability tiers
-- Eight defenders, five turrets, four fixtures, three heroes
+- Eight defenders, five turrets, four fixtures, four heroes
 - Six challenges with data-driven rule modifiers
 - 60 hand-authored waves with boss finales
 
@@ -59,7 +60,7 @@ survives a page refresh.
 - Save migration (v1 → v2) with defensive normalisation
 
 **Testing**
-- 199 written `it()` declarations, executing as 229 cases (`tests/dataIntegrity`
+- 214 written `it()` declarations, executing as 244 cases (`tests/dataIntegrity`
   parameterises 10 of them over the four maps). Run `npm test` to reproduce.
 - A committed Playwright smoke suite: 11 browser tests, `npm run test:e2e`
 
@@ -128,6 +129,16 @@ Tuned so that the shape of the difficulty curve is visible in play:
   still pays wave Amber.
 - A first three-star clear of Research Outpost pays enough Amber to buy a
   meaningful unlock immediately.
+- The early Amber path is deliberately short: River Patrol (200) is the
+  cheapest defender unlock and the answer to Delta Wetlands' water lanes, and
+  The Distract-o-matic 3000 (210) is the cheapest hero. Neither competes with
+  Delta's own 300 Amber gate on the same clear.
+- The lure field is the only mechanic that can stop an animal outright, so it
+  carries three hard limits: `steadfast` animals (every heavy and every boss)
+  ignore it, no more than five animals are held at once, and the field is
+  duty-cycled so every captive gets a walking window each period. All three
+  are covered by `tests/lureField.test.ts`, which drives the shipping
+  `CombatSystem`.
 
 Verified by driving the built game: a thin six-unit board reaches the final
 boss wave of Research Outpost and loses; an eighteen-unit board with a hero and
@@ -230,6 +241,50 @@ rather than a reaction to two bot runs.
 ---
 
 ## Changelog
+
+**v1.2 — the Distract-o-matic, and River Patrol moved up**
+
+- **New hero: The Distract-o-matic 3000.** A broadcast pylon built as the
+  first hero a player buys — 210 Amber, the cheapest hero on sale (Ironside is
+  issued free), and 140 Supply to field, the cheapest of any hero. It introduces two new mechanics:
+  - A **lure field** (`AttackSpec.lure`), which holds the nearest animals at
+    the pylon and drags anything that slipped past back down its path. This is
+    the only effect in the game that can stop an animal indefinitely, so it is
+    fenced in three ways: `steadfast` animals ignore it outright (which is
+    every heavy and every boss), it holds at most five at a time so a big pack
+    walks through the ones being held, and it is duty-cycled off the unit's
+    *base* fire rate — not the buffed one — so the walking window cannot be
+    buffed away. Holds are one frame long and re-applied each frame, which is
+    what keeps the capacity honest rather than letting the held set grow over
+    a broadcast window.
+  - A **`pulse` attack pattern**: a fan of concentric laser arcs, shaped like
+    a signal-strength icon, that damages everything in a 260-degree sweep at
+    once. No projectiles are spawned; it resolves in place like a cone.
+  - Its ability, Full-Spectrum Broadcast, is the same emitter at 360 degrees
+    with a 1.2-second pin. The cooldown (24s) is deliberately longer than
+    Anvil's, whose card claims the shortest one.
+  - Its damage is low and unpierced, so armour shrugs it off. It is a control
+    unit that needs something else to do the killing.
+- **River Patrol moved to the first row of the armory and repriced.** It was
+  the eighth and last defender card at 280 Amber, while being the only unit
+  that can cover Delta Wetlands' water lanes. It is now the second card (so it
+  lands in the first row at every column count the grid produces) and the
+  cheapest defender unlock at 200. Array order in `src/game/data/defenders.ts`
+  is what the armory renders, so the file now says so.
+- Both the ghost preview and the selection ring draw the lure radius as a
+  separate amber ring, because placement for this unit is entirely about where
+  the field lands.
+- Fixed while verifying the new hero in a browser: a long ability name wrapped
+  to three lines and spilled out of the round hero-ability button. The label is
+  now clamped to two lines; the full name and description were already on the
+  button's tooltip.
+- Tests: 214 written `it()` declarations across 14 files, 244 executed cases
+  (up from 199 / 229 across 13). The new `tests/lureField.test.ts` drives the
+  real `CombatSystem` and asserts the anti-stall limits; the capacity cap was
+  caught by these tests before it ever ran in the game.
+- Verified in the built game, not just in tests: the beacon deploys for 140
+  Supply, draws both rings, fires the arc fan, and finished wave 1 of Research
+  Outpost with 4 kills and 136 damage dealt on its own.
 
 **v1.1.1 — reported-issue fixes**
 

@@ -77,6 +77,21 @@ export interface StunSpec {
   chance: number;
 }
 
+/**
+ * A broadcast field that pulls animals off their stride and holds them at the
+ * emitter. The field is duty-cycled against the unit's own firing rhythm, so
+ * there is always a window in which held animals get to walk again.
+ */
+export interface LureSpec {
+  radius: number;
+  /** Fraction of each attack period the field is actually broadcasting, 0..1. */
+  dutyCycle: number;
+  /** How fast, in px/sec, stragglers are dragged back along their path. */
+  pullSpeed: number;
+  /** Most animals the emitter can hold at once. The rest walk straight past. */
+  capacity: number;
+}
+
 export interface BuffSpec {
   radius: number;
   fireRateMultiplier: number;
@@ -94,6 +109,7 @@ export type AttackPattern =
   | 'hitscan' // instant beam along a line
   | 'chain' // arcs between nearby enemies
   | 'lob' // arcing shell that detonates at a point
+  | 'pulse' // stationary emitter that washes an arc around itself
   | 'support'; // no direct damage, applies an aura
 
 export interface AttackSpec {
@@ -103,7 +119,7 @@ export interface AttackSpec {
   projectileSpeed?: number;
   /** Ring size for `radial`. */
   spikes?: number;
-  /** Full cone width in degrees for `cone`. */
+  /** Full arc width in degrees for `cone` and `pulse`. */
   coneAngle?: number;
   /** How often a sustained cone ticks damage, in ms. */
   coneTickMs?: number;
@@ -123,6 +139,7 @@ export interface AttackSpec {
   slow?: SlowSpec;
   stun?: StunSpec;
   buff?: BuffSpec;
+  lure?: LureSpec;
   /** Purely presentational hint used by the FX layer. */
   visual?: string;
 }
@@ -173,7 +190,8 @@ export interface UnitArtSpec {
     | 'mortar'
     | 'tank'
     | 'rifle'
-    | 'exo';
+    | 'exo'
+    | 'beacon';
   /** Machines get a plated base instead of a human silhouette. */
   chassis: 'human' | 'machine' | 'vehicle';
   /** Optional headgear flourish for humans. */
