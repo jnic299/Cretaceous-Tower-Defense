@@ -144,13 +144,20 @@ describe('lure field', () => {
   it('is configured so anything it holds is inside the weapon it feeds', () => {
     expect(LURE.radius).toBeGreaterThan(0);
     expect(LURE.radius).toBeLessThanOrEqual(BEACON.range);
-    expect(LURE.dutyCycle).toBeGreaterThan(0);
-    expect(LURE.dutyCycle).toBeLessThan(1);
-    expect(LURE.capacity).toBeGreaterThanOrEqual(1);
+    expect(LURE.holdMs).toBeGreaterThan(0);
     expect(LURE.pullSpeed).toBeGreaterThan(0);
+    expect(LURE.steadfastFactor).toBeGreaterThan(0);
+    expect(LURE.steadfastFactor).toBeLessThan(1);
   });
 
-  it('holds an animal at the emitter instead of letting it walk on', () => {
+  it('gives a freed animal long enough to walk clear before it can be caught again', () => {
+    // If recovery ran out while the animal were still inside the field it
+    // would be re-caught on the spot, which is the pinned-forever bug.
+    const slowest = Math.min(...Object.values(SPECIES).map((s) => s.baseSpeed));
+    expect(LURE.recoveryMs).toBeGreaterThan((LURE.radius / slowest) * 1000);
+  });
+
+  it('stops an animal at the emitter instead of letting it walk on', () => {
     const lured = harness([{ species: 'compsognathus', progress: 480 }]);
     lured.run(6000);
 
@@ -161,84 +168,97 @@ describe('lure field', () => {
     expect(lured.dinos[0].progress).toBeLessThan(free.dinos[0].progress);
   });
 
-  it('never holds anything permanently — the field drops every cycle', () => {
-    const h = harness([{ species: 'compsognathus', progress: 480 }]);
-    const period = 1000 / BEACON.fireRate;
-
-    let walkingFrames = 0;
-    // Three full duty cycles is long enough that a stuck animal shows up.
-    h.run(period * 3, (now) => {
-      if (h.dinos[0].currentSpeed(now) > 0) walkingFrames++;
-    });
-
-    expect(walkingFrames).toBeGreaterThan(0);
-    // Roughly the off-window's share of every period, with slack for the
-    // frame quantisation at the window edges.
-    const expected = (h.clock.now / FRAME_MS) * (1 - LURE.dutyCycle);
-    expect(walkingFrames).toBeGreaterThan(expected * 0.6);
-  });
-
-  it('caps any single hold at one broadcast window', () => {
-    const h = harness([{ species: 'compsognathus', progress: 480 }]);
-    const period = 1000 / BEACON.fireRate;
-
+  it('holds continuously while it holds at all', () => {
+    // The old duty-cycled field stuttered; a distraction should read as one
+    // unbroken pause, so the longest frozen run covers most of the budget.
+    const h = harness([{ species: 'compsognathus', progress: 560 }]);
     let frozenRun = 0;
-    let longestFreeze = 0;
-    h.run(period * 6, (now) => {
+    let longest = 0;
+    h.run(LURE.holdMs * 2, (now) => {
       if (h.dinos[0].currentSpeed(now) > 0) frozenRun = 0;
       else frozenRun += FRAME_MS;
-      longestFreeze = Math.max(longestFreeze, frozenRun);
+      longest = Math.max(longest, frozenRun);
+    });
+    expect(longest).toBeGreaterThan(LURE.holdMs * 0.8);
+  });
+
+  it('releases an animal once its budget is spent and never re-catches it', () => {
+    const h = harness([{ species: 'compsognathus', progress: 560 }]);
+
+    let frozenRun = 0;
+    let longest = 0;
+    h.run(LURE.holdMs + LURE.recoveryMs + 4000, (now) => {
+      if (h.dinos[0].currentSpeed(now) > 0) frozenRun = 0;
+      else frozenRun += FRAME_MS;
+      longest = Math.max(longest, frozenRun);
     });
 
-    // One window plus the frame of lag between applying a hold and releasing
-    // it. Anything longer would mean the field can stall an animal outright.
-    expect(longestFreeze).toBeLessThan(period * LURE.dutyCycle + FRAME_MS * 3);
+    // Held for its budget and no longer — this is the stuck-at-the-beacon
+    // regression, where an animal could be pinned for the whole match.
+    expect(longest).toBeLessThan(LURE.holdMs + FRAME_MS * 4);
   });
 
-  it('lets an animal close on the emitter rather than freezing it where it stands', () => {
-    const h = harness([{ species: 'compsognathus', progress: 300 }]);
-    const start = h.dinos[0].progress;
-    h.run(8000);
-    // It is still short of the emitter, so nothing is pulling it back yet.
-    expect(h.dinos[0].progress).toBeGreaterThan(start + 100);
+  it('lets a lured animal reach the objective in the end', () => {
+    const h = harness([{ species: 'compsognathus', progress: 560 }]);
+    h.run(25_000);
+    // Well past the emitter, so it broke free and stayed free.
+    expect(h.dinos[0].progress).toBeGreaterThan(600 + LURE.radius);
   });
 
-  it('ignores steadfast animals entirely', () => {
-    const lured = harness([{ species: 'triceratops', progress: 480 }]);
-    lured.run(6000);
+  it('distracts steadfast animals too, just for less time', () => {
+    const heavy = harness([{ species: 'ankylosaurus', progress: 560 }]);
+    const light = harness([{ species: 'compsognathus', progress: 560 }]);
 
-    const free = harness([{ species: 'triceratops', progress: 480 }]);
-    free.combat.hero = null;
-    free.run(6000);
+    const frozen = (h: Harness, ms: number) => {
+      let frames = 0;
+      h.run(ms, (now) => {
+        if (h.dinos[0].currentSpeed(now) <= 0) frames++;
+      });
+      return frames * FRAME_MS;
+    };
 
-    expect(lured.dinos[0].progress).toBeCloseTo(free.dinos[0].progress, 3);
+    const heavyHeld = frozen(heavy, LURE.holdMs + 1000);
+    const lightHeld = frozen(light, LURE.holdMs + 1000);
+
+    // The reported bug was Ankylosaurus walking straight past untouched.
+    expect(heavyHeld).toBeGreaterThan(300);
+    expect(heavyHeld).toBeLessThan(lightHeld);
   });
 
-  it('holds no more than its capacity, so a big pack walks through', () => {
-    const pack = Array.from({ length: LURE.capacity + 4 }, (_, i) => ({
+  it('holds a whole swarm, not a handful of it', () => {
+    // Swarm Protocol sends far more animals than any headcount cap would
+    // cover; every one of them should stop.
+    const pack = Array.from({ length: 14 }, (_, i) => ({
       species: 'compsognathus' as const,
-      progress: 560 + i * 8,
+      progress: 540 + i * 6,
     }));
     const h = harness(pack);
 
     let peakHeld = 0;
-    h.run(3000, (now) => {
-      const held = h.dinos.filter((d) => now < d.heldUntil).length;
-      peakHeld = Math.max(peakHeld, held);
+    h.run(1500, (now) => {
+      peakHeld = Math.max(peakHeld, h.dinos.filter((d) => now < d.heldUntil).length);
     });
 
-    expect(peakHeld).toBeGreaterThan(0);
-    expect(peakHeld).toBeLessThanOrEqual(LURE.capacity);
+    expect(peakHeld).toBe(pack.length);
   });
 
   it('drags an animal that slipped past back towards the emitter', () => {
     // Placed just beyond the beacon but still inside the field.
     const h = harness([{ species: 'compsognathus', progress: 680 }]);
     const start = h.dinos[0].progress;
-
-    // One broadcast window is enough to see the direction of travel reverse.
     h.run(300);
     expect(h.dinos[0].progress).toBeLessThan(start);
+  });
+
+  it('never drags an approaching animal forward', () => {
+    // Pulling both ways would hand an animal ground it had not walked. It
+    // still takes its own first step before the field engages, so allow one
+    // frame of ordinary walking and nothing beyond it.
+    const h = harness([{ species: 'compsognathus', progress: 500 }]);
+    const start = h.dinos[0].progress;
+    const oneStep = (SPECIES.compsognathus.baseSpeed * FRAME_MS) / 1000;
+    h.run(LURE.holdMs * 0.5);
+    expect(h.dinos[0].progress).toBeLessThanOrEqual(start + oneStep * 2);
   });
 });
 

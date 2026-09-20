@@ -276,46 +276,51 @@ export class CombatSystem {
   /* ------------------------------------------------------------------ */
 
   /**
-   * Holds the nearest few animals at the emitter and drags anything that got
-   * past it back down the path. Two hard limits keep this from being a wall:
-   * `steadfast` animals (heavies and every boss) ignore it outright, and only
-   * `capacity` animals can be held at once — a big enough pack simply walks
-   * through the ones being held.
+   * Distracts everything in range: animals stop advancing, and any that got
+   * past the emitter are dragged back to it.
+   *
+   * There is deliberately no headcount limit — a swarm strolling past an
+   * untouched beacon is the opposite of what a lure is for. The bound is per
+   * animal instead. Each one accumulates held time until it spends `holdMs`,
+   * then shakes the signal off and ignores the emitter for `recoveryMs`,
+   * which is set long enough to walk clear of the field. So every animal is
+   * delayed exactly once per pass, and none can be pinned forever.
+   *
+   * `steadfast` animals — the heavies and every boss — are not exempt, they
+   * just break free sooner, so an Ankylosaurus visibly stops and then shoves
+   * on through.
    */
   private updateLure(hero: HeroUnit, lure: LureSpec, now: number, deltaMs: number): void {
-    // Last frame's captives are released before anything else. Holds are only
-    // ever one frame long, so whatever does not make this frame's cut starts
-    // walking again — that is what keeps `capacity` honest frame to frame
-    // rather than letting the held set grow over a broadcast window.
+    // Last frame's captives are released before anything else, so an animal
+    // that left the field or broke free is walking again immediately.
     this.releaseLured(now);
-
-    // Phase is taken from the unit's *base* fire rate, not the buffed one, so
-    // the window an animal gets to walk in cannot be buffed away.
-    const period = 1000 / Math.max(0.1, hero.def.fireRate);
-    if ((now % period) / period >= lure.dutyCycle) return;
 
     const near = this.deps.grid.queryCircle(hero.x, hero.y, lure.radius, this.lureScratch);
     if (near.length === 0) return;
 
-    const candidates: { d: Dino; dSq: number }[] = [];
-    for (const d of near) {
-      if (!d.alive || d.species.traits.includes('steadfast')) continue;
-      candidates.push({ d, dSq: (d.x - hero.x) ** 2 + (d.y - hero.y) ** 2 });
-    }
-    if (candidates.length === 0) return;
-    candidates.sort((a, b) => a.dSq - b.dSq);
-
-    // Long enough to cover the next frame at any game speed, short enough that
-    // a released animal is walking again almost immediately.
-    const hold = deltaMs * 2 + 8;
     const pull = (lure.pullSpeed * deltaMs) / 1000;
 
-    for (let i = 0; i < candidates.length && i < lure.capacity; i++) {
-      const d = candidates[i].d;
-      d.heldUntil = Math.max(d.heldUntil, now + hold);
+    for (const d of near) {
+      if (!d.alive || now < d.lureImmuneUntil) continue;
+
+      const budget = d.species.traits.includes('steadfast')
+        ? lure.holdMs * lure.steadfastFactor
+        : lure.holdMs;
+
+      d.lureHeldMs += deltaMs;
+      if (d.lureHeldMs >= budget) {
+        d.lureHeldMs = 0;
+        d.lureImmuneUntil = now + lure.recoveryMs;
+        continue;
+      }
+
+      // A hold covering only the next frame, re-applied each frame, so the
+      // release above is all it takes to free an animal.
+      d.heldUntil = Math.max(d.heldUntil, now + deltaMs * 2 + 8);
       this.luredHeld.push(d);
 
-      // Anything that slipped past the emitter gets dragged back to it.
+      // Pull back only. Dragging an approaching animal forward would hand it
+      // ground it had not walked yet.
       const anchor = this.lureAnchorFor(d.path, hero.x, hero.y);
       const delta = anchor - d.progress;
       if (delta < -1) d.progress = Math.max(0, d.progress + Math.max(delta, -pull));

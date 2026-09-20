@@ -54,6 +54,10 @@ export class Dino {
   /** Set while the animal is distracted by a decoy beacon. */
   heldUntil = 0;
   heldBy: { x: number; y: number; damage(amount: number): void } | null = null;
+  /** Milliseconds a lure emitter has held this animal so far. */
+  lureHeldMs = 0;
+  /** After breaking free of a lure, the animal ignores emitters until this. */
+  lureImmuneUntil = 0;
   /** Herd trait: speed bonus granted by nearby callers. */
   herdBonus = 1;
 
@@ -98,6 +102,8 @@ export class Dino {
     this.burnAccumulator = 0;
     this.heldUntil = 0;
     this.heldBy = null;
+    this.lureHeldMs = 0;
+    this.lureImmuneUntil = 0;
     this.herdBonus = 1;
     this.hitFlashUntil = 0;
     this.nextSprintAt = now + (species.sprintIntervalMs ?? 0) * (0.4 + Math.random() * 0.6);

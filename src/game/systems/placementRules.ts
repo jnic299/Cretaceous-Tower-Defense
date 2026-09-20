@@ -12,6 +12,7 @@ export type PlacementReason =
   | 'occupied'
   | 'objective'
   | 'supply'
+  | 'atLimit'
   | 'restricted';
 
 export interface OccupiedSlot {
@@ -31,6 +32,8 @@ export interface PlacementQuery {
   supply: number;
   /** False when a challenge rule forbids this unit entirely. */
   permitted?: boolean;
+  /** True when this unit's per-match cap is already spent. */
+  atLimit?: boolean;
 }
 
 export interface PlacementVerdict {
@@ -50,6 +53,7 @@ const VERDICTS: Record<PlacementReason, string> = {
   occupied: 'Too close to another placement',
   objective: 'Too close to the objective',
   supply: 'Not enough Supply',
+  atLimit: 'Already deployed the maximum of these',
   restricted: 'Not permitted in this operation',
 };
 
@@ -72,6 +76,7 @@ export function evaluatePlacement(
   const { x, y, footprint, terrain } = query;
 
   if (query.permitted === false) return verdict('restricted');
+  if (query.atLimit) return verdict('atLimit');
   if (!geometry.inBounds(x, y, footprint + 2)) return verdict('outOfBounds');
 
   const needsWater = terrain === 'water';

@@ -19,7 +19,7 @@ export function DeployBar({ cards, activeId, hint, valid, onCommand }: Props) {
         {cards.map((card) => {
           const def = findDefender(card.id);
           const fixture = findFixture(card.id);
-          const disabled = card.locked || !card.affordable;
+          const disabled = card.locked || card.atLimit || !card.affordable;
           const source = def ?? fixture;
           return (
             <Tooltip
@@ -31,7 +31,15 @@ export function DeployBar({ cards, activeId, hint, valid, onCommand }: Props) {
                     <div className="tip__role">{source.title}</div>
                     <p>{source.description}</p>
                     <div className="tip__cost">{card.cost} Supply · {card.hotkey}</div>
+                    {card.maxPerMatch !== undefined && (
+                      <div className="tip__role">
+                        Limit {card.maxPerMatch} per operation
+                      </div>
+                    )}
                     {card.locked && <div className="tip__blocked">Not permitted in this operation</div>}
+                    {!card.locked && card.atLimit && (
+                      <div className="tip__blocked">Already deployed for this operation</div>
+                    )}
                   </>
                 ) : (
                   card.name
@@ -43,7 +51,7 @@ export function DeployBar({ cards, activeId, hint, valid, onCommand }: Props) {
                   disabled ? 'is-disabled' : ''
                 }`}
                 onClick={() => onCommand({ type: 'selectCard', id: activeId === card.id ? null : card.id })}
-                disabled={card.locked}
+                disabled={card.locked || card.atLimit}
                 aria-pressed={activeId === card.id}
               >
                 <span className="deploy-card__art">

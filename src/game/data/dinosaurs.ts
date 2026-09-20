@@ -259,7 +259,10 @@ export const SPECIES: Record<SpeciesId, SpeciesDef> = {
     id: 'ankylosaurus',
     name: 'Ankylosaurus',
     designation: 'Armoured siege walker',
-    baseHp: 460,
+    // Armour is what makes this animal hard, not bulk. Carrying 460 base HP
+    // on top of 16 armour made the Amberhide tier unkillable by anything
+    // without armour piercing, so the HP came down and the plating stayed.
+    baseHp: 300,
     baseSpeed: 33,
     armor: 16,
     objectiveDamage: 14,

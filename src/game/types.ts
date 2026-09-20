@@ -79,17 +79,23 @@ export interface StunSpec {
 
 /**
  * A broadcast field that pulls animals off their stride and holds them at the
- * emitter. The field is duty-cycled against the unit's own firing rhythm, so
- * there is always a window in which held animals get to walk again.
+ * emitter. Every animal in range is affected — there is no headcount limit,
+ * because a swarm walking past untouched is the opposite of a lure. What
+ * bounds it instead is a per-animal budget: each one can only be held for
+ * `holdMs` before it shakes the signal off and ignores the emitter for
+ * `recoveryMs`, which is long enough to walk clear. Nothing can be pinned
+ * indefinitely, and nothing is immune.
  */
 export interface LureSpec {
   radius: number;
-  /** Fraction of each attack period the field is actually broadcasting, 0..1. */
-  dutyCycle: number;
-  /** How fast, in px/sec, stragglers are dragged back along their path. */
+  /** How long one animal can be held before it breaks free. */
+  holdMs: number;
+  /** How long a freed animal ignores the emitter. Must outlast a walk clear. */
+  recoveryMs: number;
+  /** `holdMs` multiplier for `steadfast` animals — distracted, but briefly. */
+  steadfastFactor: number;
+  /** How fast, in px/sec, animals that got past are dragged back to it. */
   pullSpeed: number;
-  /** Most animals the emitter can hold at once. The rest walk straight past. */
-  capacity: number;
 }
 
 export interface BuffSpec {
@@ -218,6 +224,8 @@ export interface DefenderDef {
   footprint: number;
   defaultTargeting: TargetMode;
   targetModes: TargetMode[];
+  /** Cap on how many of this unit one operation may field. Unset means no cap. */
+  maxPerMatch?: number;
   levels: [DefenderLevel, DefenderLevel, DefenderLevel];
   art: UnitArtSpec;
   /** Bullet points for the armory card. */

@@ -14,6 +14,10 @@ export interface CardState {
   affordable: boolean;
   /** Blocked by a challenge rule. */
   locked: boolean;
+  /** This unit's per-match cap is already spent. */
+  atLimit: boolean;
+  /** Present only for units that carry a per-match cap. */
+  maxPerMatch?: number;
   hotkey: string;
 }
 

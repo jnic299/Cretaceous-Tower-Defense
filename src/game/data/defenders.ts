@@ -200,6 +200,8 @@ export const DEFENDERS: DefenderDef[] = [
     footprint: 22,
     defaultTargeting: 'closest',
     targetModes: ['closest', 'first', 'weakest'],
+    // There is only one Fred.
+    maxPerMatch: 1,
     strengths: ['Cone hits an entire group', 'Burn keeps ticking after the cone moves on', 'Burn damage ignores armour'],
     weaknesses: ['Very short range', 'Direct flame is stopped cold by heavy plating', 'Immobile once committed'],
     art: { body: 0x6b4a2f, accent: 0xe0592b, metal: 0x7e7168, weapon: 'flamer', chassis: 'human', hat: 'hood' },

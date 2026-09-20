@@ -60,7 +60,7 @@ survives a page refresh.
 - Save migration (v1 → v2) with defensive normalisation
 
 **Testing**
-- 214 written `it()` declarations, executing as 244 cases (`tests/dataIntegrity`
+- 222 written `it()` declarations, executing as 252 cases (`tests/dataIntegrity`
   parameterises 10 of them over the four maps). Run `npm test` to reproduce.
 - A committed Playwright smoke suite: 11 browser tests, `npm run test:e2e`
 
@@ -242,6 +242,62 @@ rather than a reaction to two bot runs.
 
 ## Changelog
 
+**v1.3 — play feedback: lure rework, Fred cap, Ankylosaurus**
+
+- **The lure was doing the opposite of its job.** Reported: swarms in Swarm
+  Protocol walked past untouched, Ankylosaurus on Delta ignored it entirely,
+  and a few animals got permanently stuck at the beacon. All three came from
+  the same v1.2 model — a five-animal headcount cap plus a `steadfast`
+  exemption plus an unbounded pull, which meant most of a wave was unaffected
+  while the handful that *were* caught could never leave.
+
+  The cap and the exemption are gone. Every animal inside the field is now
+  held, heavies and bosses included. What bounds it is a per-animal budget:
+  each animal accumulates held time until it spends `holdMs` (3.2s), then
+  shakes the signal off and ignores the emitter for `recoveryMs` (6s) — set
+  long enough for the slowest animal in the game to walk clear of the field,
+  so nothing can be re-caught on the spot. `steadfast` animals get 45% of the
+  budget, so an Ankylosaurus visibly stops and then shoves on through instead
+  of strolling past. The pull only ever drags animals *backwards* toward the
+  emitter; pulling an approaching animal forward would hand it ground it had
+  not walked. The duty cycle is gone too — a distraction should read as one
+  unbroken pause, not a stutter.
+
+- **The beacon's pulse was too much gun.** Range 200 → 150, damage 34 → 16,
+  lure radius 185 → 140. The ability's pin went the other way, 1.2s → 2s, and
+  its damage 170 → 130. Its job is the lure with enough chip damage to help
+  clear what it is holding, and its DPS is now deliberately *below* the best
+  defender's — there is a test asserting exactly that, paired with the older
+  one that every *other* hero stays above it.
+
+- **One Fred per operation.** `DefenderDef.maxPerMatch` caps a unit's
+  headcount for a match; Fred is the only unit that carries it. The card
+  disables itself once the cap is spent and the placement rule reports it
+  ahead of any terrain check, so the hint says why the card is dead rather
+  than why the ground is wrong. Selling frees the slot.
+
+- **The Amberhide Ankylosaurus was tanky twice over.** 16 armour *and* 460
+  base HP meant the orange tier landed at 2484 HP behind 19 flat reduction —
+  a Ranger needed 107 seconds of uninterrupted fire for one of the three that
+  Delta's wave 12 sends. Armour is the species' whole identity, so the plating
+  stays and the bulk comes down: base HP 460 → 300, which puts the orange tier
+  at 1620. Low-calibre fire still bounces, exactly as the codex promises;
+  armour-piercing now kills in a sensible time.
+
+- **The hero ability label was unreadable.** "FULL-SPECTRUM BROADCAST" wrapped
+  to three lines and ran out of the round button on both axes. The ability is
+  renamed Signal Bloom, and the label now breaks inside words before clamping,
+  so the next long name degrades instead of spilling.
+
+- Tests: 222 written `it()` declarations, 252 executed cases (up from 214 /
+  244). `tests/lureField.test.ts` was rewritten around the new model and now
+  covers each reported symptom directly — a whole 14-animal swarm held rather
+  than a handful, an Ankylosaurus distracted rather than exempt, and a hold
+  that provably ends. Two balance guardrails were added: the Amberhide
+  Ankylosaurus must fall to massed Rangers inside a sensible window while
+  still punishing them individually, and a control hero's DPS must stay
+  *below* the best defender's while every other hero stays above it.
+
 **v1.2 — the Distract-o-matic, and River Patrol moved up**
 
 - **New hero: The Distract-o-matic 3000.** A broadcast pylon built as the
@@ -260,7 +316,7 @@ rather than a reaction to two bot runs.
   - A **`pulse` attack pattern**: a fan of concentric laser arcs, shaped like
     a signal-strength icon, that damages everything in a 260-degree sweep at
     once. No projectiles are spawned; it resolves in place like a cone.
-  - Its ability, Full-Spectrum Broadcast, is the same emitter at 360 degrees
+  - Its ability, Signal Bloom, is the same emitter at 360 degrees
     with a 1.2-second pin. The cooldown (24s) is deliberately longer than
     Anvil's, whose card claims the shortest one.
   - Its damage is low and unpierced, so armour shrugs it off. It is a control

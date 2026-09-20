@@ -518,8 +518,11 @@
   max-width: 68px;
   text-align: center;
   line-height: 1.15;
-  /* A three-line ability name spills out of the round button, so clamp it —
-     the full name and description are on the button's tooltip either way. */
+  /* A long ability name used to run out of the round button on both axes:
+     a word wider than the label wrapped past its sides, and a third line
+     dropped out of the bottom. Break inside words, then clamp to two lines.
+     The full name and description are on the button's tooltip regardless. */
+  overflow-wrap: anywhere;
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;

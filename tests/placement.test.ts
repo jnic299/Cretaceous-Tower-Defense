@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { MapGeometry } from '../src/game/systems/MapGeometry';
 import { evaluatePlacement, snapToGrid } from '../src/game/systems/placementRules';
 import { RESEARCH_OUTPOST, DELTA_WETLANDS, CALDERA_STATION, FOSSIL_CANYON } from '../src/game/data/maps';
+import { DEFENDERS } from '../src/game/data/defenders';
 
 const outpost = new MapGeometry(RESEARCH_OUTPOST);
 const wetlands = new MapGeometry(DELTA_WETLANDS);
@@ -155,6 +156,29 @@ describe('placement rules — Fossil Canyon', () => {
 
   it('still refuses the corridors themselves', () => {
     expect(verdictAt(560, 545)).toBe('onPath');
+  });
+});
+
+describe('per-match deployment caps', () => {
+  it('refuses a unit whose cap is already spent, ahead of terrain checks', () => {
+    // Spelled out before the position is even considered, so the player is
+    // told why the card is dead rather than why the ground is wrong.
+    const v = evaluatePlacement(outpost, { ...base, x: 160, y: 260, atLimit: true }, []);
+    expect(v.ok).toBe(false);
+    expect(v.reason).toBe('atLimit');
+  });
+
+  it('is unaffected when the cap is not spent', () => {
+    expect(evaluatePlacement(outpost, { ...base, x: 160, y: 260, atLimit: false }, []).ok).toBe(true);
+  });
+
+  it('caps Fred at one per operation and leaves everyone else uncapped', () => {
+    const fred = DEFENDERS.find((d) => d.id === 'fred')!;
+    expect(fred.maxPerMatch).toBe(1);
+    for (const d of DEFENDERS) {
+      if (d.id === 'fred') continue;
+      expect(d.maxPerMatch, d.id).toBeUndefined();
+    }
   });
 });
 

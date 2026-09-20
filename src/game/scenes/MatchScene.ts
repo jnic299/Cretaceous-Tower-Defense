@@ -605,6 +605,7 @@ export class MatchScene extends Phaser.Scene {
         cost,
         supply: this.economy.supply,
         permitted: isHeroCard || !this.isCardLocked(this.activeCardId),
+        atLimit: !isHeroCard && this.isAtDeployLimit(def as PlaceableDef),
       },
       this.occupiedSlots(isMove ? this.hero : undefined),
     );
@@ -1216,6 +1217,13 @@ export class MatchScene extends Phaser.Scene {
     return false;
   }
 
+  /** True when a unit's `maxPerMatch` cap is already spent on this board. */
+  private isAtDeployLimit(def: PlaceableDef): boolean {
+    const cap = (def as DefenderDef).maxPerMatch;
+    if (!cap) return false;
+    return this.defenders.filter((u) => u.def.id === def.id).length >= cap;
+  }
+
   private buildCards(): CardState[] {
     const allowedCats = this.challenge?.modifiers.allowedCategories;
     const allowedIds = this.challenge?.modifiers.allowedDefenderIds;
@@ -1228,6 +1236,8 @@ export class MatchScene extends Phaser.Scene {
       locked:
         (allowedCats ? !allowedCats.includes(def.category) : false) ||
         (allowedIds ? !allowedIds.includes(def.id) : false),
+      atLimit: this.isAtDeployLimit(def),
+      maxPerMatch: (def as DefenderDef).maxPerMatch,
       hotkey: `⇧${i + 1}`,
     }));
   }

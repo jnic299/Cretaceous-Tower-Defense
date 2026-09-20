@@ -85,6 +85,31 @@ describe('species', () => {
     const rangerDamage = DEFENDERS.find((d) => d.id === 'ranger')!.levels[0].damage;
     expect(SPECIES.ankylosaurus.armor).toBeGreaterThan(rangerDamage);
   });
+
+  it('leaves the armoured heavy killable by the kit a player actually owns', () => {
+    // Delta Wetlands sends three Amberhide Ankylosaurus on wave 12, long
+    // before a player can afford the Sniper or Rail Turret that answer
+    // armour properly. Massed Rangers must still get there eventually, or
+    // the wave is not hard, it is impossible.
+    const anky = SPECIES.ankylosaurus;
+    const orange = TIERS.orange;
+    const hp = anky.baseHp * orange.hpMultiplier;
+    const armor = anky.armor + orange.armorBonus;
+    const dart = DEFENDERS.find((d) => d.id === 'ranger')!.levels[2];
+    const perHit = Math.max(dart.damage * 0.1, dart.damage - armor * (1 - (dart.attack.armorPierce ?? 0)));
+    const secondsForEight = hp / (perHit * dart.fireRate * 8);
+    expect(secondsForEight).toBeLessThan(15);
+    // But it should still punish low-calibre fire, or the armour means nothing.
+    expect(hp / (perHit * dart.fireRate)).toBeGreaterThan(45);
+  });
+
+  it('does not make the armoured heavy tanky twice over', () => {
+    // Plating is the Ankylosaurus' whole answer, so it must not also carry
+    // the bulk of an unarmoured heavy — that combination scales into a tier
+    // nothing without armour piercing can chew through.
+    expect(SPECIES.ankylosaurus.armor).toBeGreaterThan(SPECIES.triceratops.armor);
+    expect(SPECIES.ankylosaurus.baseHp).toBeLessThan(SPECIES.triceratops.baseHp);
+  });
 });
 
 describe('defenders and turrets', () => {
@@ -199,12 +224,28 @@ describe('heroes', () => {
     }
   });
 
-  it('makes heroes stronger than an ordinary defender', () => {
+  it('makes damage heroes stronger than an ordinary defender', () => {
     const bestDefenderDps = Math.max(
       ...DEFENDERS.map((d) => d.levels[0].damage * d.levels[0].fireRate),
     );
     for (const h of HEROES) {
+      // A control hero earns its place with the lure, not with damage, and is
+      // deliberately held below this bar — see the next test.
+      if (h.attack.lure) continue;
       expect(h.damage * h.fireRate, h.id).toBeGreaterThan(bestDefenderDps);
+    }
+  });
+
+  it('keeps control heroes off the damage charts', () => {
+    const bestDefenderDps = Math.max(
+      ...DEFENDERS.map((d) => d.levels[0].damage * d.levels[0].fireRate),
+    );
+    const control = HEROES.filter((h) => h.attack.lure);
+    expect(control.length).toBeGreaterThan(0);
+    for (const h of control) {
+      // Its pulse washes a whole arc, so per-target damage has to stay modest
+      // or it out-damages the units it is supposed to be setting up.
+      expect(h.damage * h.fireRate, h.id).toBeLessThan(bestDefenderDps);
     }
   });
 
@@ -232,11 +273,16 @@ describe('heroes', () => {
       // Anything the field pins must be somewhere the pulse can reach.
       expect(lure.radius, h.id).toBeGreaterThan(0);
       expect(lure.radius, h.id).toBeLessThanOrEqual(h.range);
-      // A duty cycle of 1 would stop animals for good.
-      expect(lure.dutyCycle, h.id).toBeGreaterThan(0);
-      expect(lure.dutyCycle, h.id).toBeLessThan(1);
-      expect(lure.capacity, h.id).toBeGreaterThanOrEqual(1);
+      // The budget is what stops an animal being pinned for the whole match.
+      expect(lure.holdMs, h.id).toBeGreaterThan(0);
       expect(lure.pullSpeed, h.id).toBeGreaterThan(0);
+      // Heavies are slowed, never exempt, and never held as long.
+      expect(lure.steadfastFactor, h.id).toBeGreaterThan(0);
+      expect(lure.steadfastFactor, h.id).toBeLessThan(1);
+      // Recovery has to outlast the slowest walk clear of the field, or a
+      // freed animal is caught again on the spot and never gets through.
+      const slowest = Math.min(...SPECIES_ORDER.map((id) => SPECIES[id].baseSpeed));
+      expect(lure.recoveryMs, h.id).toBeGreaterThan((lure.radius / slowest) * 1000);
     }
   });
 
