@@ -9,6 +9,7 @@ import {
   shotIntervalMs,
   splashDamageAt,
   MIN_DAMAGE,
+  ARMOR_FLOOR_RATIO,
 } from '../src/game/systems/combatMath';
 import { SPECIES } from '../src/game/data/dinosaurs';
 import { TIERS } from '../src/game/data/tiers';
@@ -18,10 +19,24 @@ describe('armour', () => {
     expect(applyArmor(50, 10)).toBe(40);
   });
 
-  it('never reduces a hit below a tenth of its printed damage', () => {
+  it('never reduces a hit below the floor fraction of its printed damage', () => {
     // A 5-damage flame tick against 16 armour: heavily reduced, not nullified.
-    expect(applyArmor(5, 16)).toBeCloseTo(1, 5);
-    expect(applyArmor(100, 500)).toBe(10);
+    expect(applyArmor(5, 16)).toBeCloseTo(5 * ARMOR_FLOOR_RATIO, 5);
+    expect(applyArmor(100, 500)).toBeCloseTo(100 * ARMOR_FLOOR_RATIO, 5);
+  });
+
+  it('leaves massed light fire able to grind plating down', () => {
+    // The reported failure: a river gauntlet of upgraded Sentry Turrets did
+    // nothing at all to a Cobalt Ankylosaurus, because each 13-damage round
+    // landed for 1.3 against 17 armour. Six of them now kill it inside the
+    // time it spends walking through their arcs.
+    const armour = effectiveArmor(SPECIES.ankylosaurus, TIERS.blue);
+    const perRound = applyArmor(13, armour, 0.15);
+    const gauntletDps = perRound * 4.6 * 6;
+    const hp = scaledHp(SPECIES.ankylosaurus, TIERS.blue);
+    expect(hp / gauntletDps).toBeLessThan(10);
+    // But one turret alone is still hopeless against it.
+    expect(hp / (perRound * 4.6)).toBeGreaterThan(30);
   });
 
   it('always deals at least the minimum', () => {
@@ -44,7 +59,12 @@ describe('armour', () => {
     const armour = effectiveArmor(anky, TIERS.orange);
     const dartDps = applyArmor(10, armour, 0.15) * 1.5;
     const railDps = applyArmor(170, armour, 1) * 0.36;
-    expect(railDps).toBeGreaterThan(dartDps * 20);
+    // A rail round ignores plating entirely while a dart is cut to the floor,
+    // so the right tool is still an order of magnitude better. The margin is
+    // narrower than it was only because the floor no longer nullifies darts.
+    expect(railDps).toBeGreaterThan(dartDps * 10);
+    // And a dart still loses most of its printed damage to the plating.
+    expect(applyArmor(10, effectiveArmor(anky, TIERS.green), 0.15)).toBeLessThan(10 * 0.4);
   });
 });
 

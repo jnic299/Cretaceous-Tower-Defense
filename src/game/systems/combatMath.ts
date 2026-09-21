@@ -2,8 +2,17 @@ import type { SpeciesDef, TierDef } from '../types';
 
 /** Nothing is ever fully immune: a hit always lands for at least this much. */
 export const MIN_DAMAGE = 1;
-/** Armour can never reduce a hit below this fraction of its printed damage. */
-export const ARMOR_FLOOR_RATIO = 0.1;
+/**
+ * Armour can never reduce a hit below this fraction of its printed damage.
+ *
+ * At 0.1 this floor was a cliff rather than a penalty: a Sentry Turret's
+ * 13-damage round against an Ankylosaurus' 17 armour landed for 1.3, so a
+ * whole gauntlet of them did nothing at all, and the level-3 upgrade jumped
+ * six-fold the moment per-hit damage finally crossed the plating. At 0.3 the
+ * same round lands for 3.9 — still a 70% cut, still the wrong tool, but
+ * massed fire grinds an armoured animal down instead of bouncing off it.
+ */
+export const ARMOR_FLOOR_RATIO = 0.3;
 
 export function scaledHp(species: SpeciesDef, tier: TierDef): number {
   return Math.round(species.baseHp * tier.hpMultiplier);

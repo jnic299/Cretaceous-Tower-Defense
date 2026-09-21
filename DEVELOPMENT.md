@@ -60,7 +60,7 @@ survives a page refresh.
 - Save migration (v1 → v2) with defensive normalisation
 
 **Testing**
-- 224 written `it()` declarations, executing as 254 cases (`tests/dataIntegrity`
+- 225 written `it()` declarations, executing as 255 cases (`tests/dataIntegrity`
   parameterises 10 of them over the four maps). Run `npm test` to reproduce.
 - A committed Playwright smoke suite: 11 browser tests, `npm run test:e2e`
 
@@ -118,10 +118,13 @@ in CI rather than in a player's match.
 
 Tuned so that the shape of the difficulty curve is visible in play:
 
-- Armour is flat reduction, which is what makes rapid low-calibre fire the
-  wrong answer to plating. A Ranger dart against an orange Ankylosaurus lands
-  for the floor; a Rail Turret round barely notices the plate. Burn bypasses
-  armour entirely, which is Fred's answer to the same problem.
+- Armour is flat reduction with a floor at 30% of printed damage, which is
+  what makes rapid low-calibre fire the wrong answer to plating without making
+  it futile. A Ranger dart against an orange Ankylosaurus keeps barely a third
+  of its damage; a Rail Turret round barely notices the plate. Burn bypasses
+  armour entirely, which is Fred's answer to the same problem. The floor
+  matters more than it looks: at 0.1 a weapon whose per-hit damage sat under
+  the plating did literally nothing, and its next upgrade jumped six-fold.
 - Objective damage rises far more slowly than health across tiers. Late waves
   are meant to be difficult to kill, not to end the level on one leak.
 - Amber pays for progress, not for grinding. Waves and bosses pay every run;
@@ -241,6 +244,48 @@ rather than a reaction to two bot runs.
 ---
 
 ## Changelog
+
+**v1.5 — the armour floor was a cliff**
+
+Reported again that Ankylosaurus was too tanky, with a screenshot: a Cobalt
+one walked the Delta river through a gauntlet of six Sentry Turrets upgraded
+one or two levels, a River Patrol and the Distract-o-matic, and reached the
+objective. Measuring that exact board found the cause, and it was not the
+species' health.
+
+`ARMOR_FLOOR_RATIO` was 0.1 — armour could cut a hit to a tenth of its
+printed damage. Against a Cobalt Ankylosaurus' 17 armour, a Sentry Turret's
+13-damage round landed for **1.3**. Six of them came to 36 dps against 705
+HP, so the gauntlet genuinely could not kill it. Worse, the level-3 upgrade
+jumped **six-fold** (6 → 37 dps) because that is where per-hit damage finally
+crossed the plating: an upgrade cliff no player could see coming.
+
+The floor is now 0.3. The same round lands for 3.9 — still a 70% cut, still
+plainly the wrong tool, but massed light fire grinds plating down instead of
+bouncing off it. Six L2 sentries now kill that animal in 6.5s rather than
+19.6s.
+
+The change is surgical because the floor only binds when armour is at least
+70% of a weapon's *per-hit* damage. Every level-3 weapon in the game is
+untouched except the three whose damage was already being nullified — Fred's
+flame tick, the Field Engineer's sidearm and the Coolant Projector, all of
+which are control or support units rather than damage dealers (and Fred is
+capped at one per operation). What changes is the low-level turret picture,
+which is precisely where the problem was:
+
+| vs Cobalt Ankylosaurus | before | after |
+| --- | --- | --- |
+| Sentry Turret L1 | 4.0 dps | 10.8 dps |
+| Sentry Turret L2 | 6.0 dps | 17.9 dps |
+| Sentry Turret L3 | 36.9 dps | 36.9 dps |
+| Ranger L2 | 3.9 dps | 7.9 dps |
+
+The Ankylosaurus keeps its identity: a single turret still needs over 30
+seconds for one, a rail round still out-damages a dart by more than ten to
+one per shot, and a dart still loses over 60% of its printed damage to the
+plating. Its health is left alone at 300 — the v1.3 cut plus this is enough,
+and cutting further would have made armour-piercing weapons trivialise it
+while still leaving turret gauntlets doing 1 damage a shot.
 
 **v1.4 — Signal Bloom buff, longer lure freeze**
 
