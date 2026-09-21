@@ -185,6 +185,29 @@ describe('lure field', () => {
     expect(longest).toBeGreaterThan(LURE.holdMs * 0.8);
   });
 
+  it('freezes an animal for seconds, not a stumble', () => {
+    // The reported feel problem was the pause being too brief to read as a
+    // distraction at all, so the measured freeze is pinned here rather than
+    // only the configured budget.
+    const light = harness([{ species: 'compsognathus', progress: 560 }]);
+    const heavy = harness([{ species: 'ankylosaurus', progress: 560 }]);
+
+    const longestFreeze = (h: Harness) => {
+      let run = 0;
+      let longest = 0;
+      h.run(LURE.holdMs + 1500, (now) => {
+        if (h.dinos[0].currentSpeed(now) > 0) run = 0;
+        else run += FRAME_MS;
+        longest = Math.max(longest, run);
+      });
+      return longest;
+    };
+
+    expect(longestFreeze(light)).toBeGreaterThan(4500);
+    // Heavies get the discounted budget and should still visibly stop.
+    expect(longestFreeze(heavy)).toBeGreaterThan(2000);
+  });
+
   it('releases an animal once its budget is spent and never re-catches it', () => {
     const h = harness([{ species: 'compsognathus', progress: 560 }]);
 

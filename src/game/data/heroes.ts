@@ -73,7 +73,7 @@ export const HEROES: HeroDef[] = [
       coneAngle: 260,
       // Every animal in the field is held, heavies included — the bound is the
       // per-animal budget, not a headcount. See `LureSpec`.
-      lure: { radius: 140, holdMs: 3200, recoveryMs: 6000, steadfastFactor: 0.45, pullSpeed: 90 },
+      lure: { radius: 140, holdMs: 6000, recoveryMs: 6000, steadfastFactor: 0.5, pullSpeed: 90 },
       visual: 'broadcast',
     },
     ability: {
@@ -84,9 +84,9 @@ export const HEROES: HeroDef[] = [
       cooldownMs: 24000,
       kind: 'self',
       radius: 190,
-      damage: 130,
+      damage: 240,
       damageType: 'shock',
-      stun: { durationMs: 2000, chance: 1 },
+      stun: { durationMs: 3400, chance: 1 },
       visual: 'broadcast',
     },
     repositionCooldownMs: 10000,
@@ -94,7 +94,7 @@ export const HEROES: HeroDef[] = [
     strengths: [
       'The cheapest hero you can buy, and the cheapest of any to field',
       'Stops every animal that enters the field, swarms and heavies alike',
-      'Drags anything that got past back to the pylon, then pulses the clump',
+      'Drags stragglers back to the pylon; Signal Bloom pins the crowd longest',
     ],
   },
 

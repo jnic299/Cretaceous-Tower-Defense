@@ -249,6 +249,17 @@ describe('heroes', () => {
     }
   });
 
+  it('gives the control hero the longest pin of any ability', () => {
+    // That is what it trades its damage for, so it must actually hold it.
+    const control = HEROES.filter((h) => h.attack.lure);
+    expect(control.length).toBe(1);
+    const pin = control[0].ability.stun?.durationMs ?? 0;
+    for (const h of HEROES) {
+      if (h.attack.lure) continue;
+      expect(pin, h.id).toBeGreaterThan(h.ability.stun?.durationMs ?? 0);
+    }
+  });
+
   it('keeps one clearly cheapest hero for a player to buy first', () => {
     const paid = HEROES.filter((h) => h.unlockCost > 0).sort((a, b) => a.unlockCost - b.unlockCost);
     expect(paid.length).toBeGreaterThan(1);

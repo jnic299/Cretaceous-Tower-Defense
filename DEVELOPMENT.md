@@ -60,7 +60,7 @@ survives a page refresh.
 - Save migration (v1 → v2) with defensive normalisation
 
 **Testing**
-- 222 written `it()` declarations, executing as 252 cases (`tests/dataIntegrity`
+- 224 written `it()` declarations, executing as 254 cases (`tests/dataIntegrity`
   parameterises 10 of them over the four maps). Run `npm test` to reproduce.
 - A committed Playwright smoke suite: 11 browser tests, `npm run test:e2e`
 
@@ -241,6 +241,35 @@ rather than a reaction to two bot runs.
 ---
 
 ## Changelog
+
+**v1.4 — Signal Bloom buff, longer lure freeze**
+
+- **Signal Bloom hits properly now.** Damage 130 → 240 and the pin 2s → 3.4s,
+  on the same 24s cooldown. That makes it the longest pin any hero ability can
+  put on a crowd, which is what the hero trades its damage for; Anvil keeps
+  the ability damage crown at 290 and its card's claim to the shortest
+  cooldown at 21s. There is a test asserting the pin ordering so the identity
+  cannot drift.
+
+- **The lure freeze was too brief to read as a distraction.** `holdMs`
+  3.2s → 6s, and `steadfastFactor` 0.45 → 0.5 so heavies go from 1.4s to 3s —
+  the difference between a stumble and a stop. `recoveryMs` stays at 6s, which
+  still outlasts the slowest animal's walk clear of the field (Ankylosaurus,
+  4.2s), so the anti-stuck property is intact. The measured freeze is now
+  pinned by a test rather than only the configured budget, because the budget
+  was never the thing that felt wrong.
+
+- Verified in the built game: the bloom lands its full 240 in one hit (hero
+  damage dealt 16 → 258) and the button goes on cooldown, and the held pack
+  sits at the pylon rather than at the field's edge.
+
+  One thing left alone, worth a play check: the pull is still backward-only,
+  so an animal entering the field freezes where it first crosses the radius
+  rather than being drawn the last stretch to the pylon. Pulling inward would
+  read better, but with the shortest freeze (a steadfast heavy at 3s) the
+  forward pull could gain slightly more ground than the freeze denies, so it
+  is not free. Say the word if the stop-at-the-edge look is part of what still
+  feels off.
 
 **v1.3 — play feedback: lure rework, Fred cap, Ankylosaurus**
 
