@@ -16,9 +16,12 @@ import { asScene, fakeScene } from './support/fakeScene';
 
 /**
  * The Distract-o-matic's lure field is the only mechanic in the game that can
- * stop an animal indefinitely, so these tests drive the shipping
- * `CombatSystem` and assert the limits that keep it from being a wall: the
- * duty cycle, the capacity, and the `steadfast` exemption.
+ * stop an animal outright, so these tests drive the shipping `CombatSystem`
+ * and assert the limits that keep it from being a wall: the per-animal hold
+ * budget, the recovery window that has to outlast a walk clear of the field,
+ * and the shorter budget `steadfast` animals get. Nothing is exempt and
+ * nothing is capped by headcount — a swarm walking past untouched was the
+ * bug, not the design.
  */
 
 const path: PathRuntime = new MapGeometry(RESEARCH_OUTPOST).paths[0];
