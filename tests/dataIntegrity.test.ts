@@ -317,10 +317,13 @@ describe('fixtures', () => {
     }
   });
 
-  it('makes every crowd-control fixture wear out or expire', () => {
+  it('makes every crowd-control fixture wear out under use', () => {
+    // A fixture that imposes itself on the animals has to be consumable, and
+    // integrity is the only meter that can consume one: nothing is on a
+    // countdown, so integrity alone is what keeps these from being permanent.
     for (const f of FIXTURES) {
       if (f.kind !== 'barricade' && f.kind !== 'decoy') continue;
-      expect(f.integrity > 0 || f.durationMs > 0, f.id).toBe(true);
+      expect(f.integrity, f.id).toBeGreaterThan(0);
     }
   });
 });

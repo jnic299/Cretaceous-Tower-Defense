@@ -61,7 +61,7 @@ survives a page refresh.
 - Save migration (v1 → v2) with defensive normalisation
 
 **Testing**
-- 247 written `it()` declarations, executing as 277 cases (`tests/dataIntegrity`
+- 258 written `it()` declarations, executing as 288 cases (`tests/dataIntegrity`
   parameterises 10 of them over the four maps). Run `npm test` to reproduce.
 - A committed Playwright smoke suite: 11 browser tests, `npm run test:e2e`
 
@@ -103,8 +103,11 @@ with what a click actually does. It returns the most informative failure first
 
 **Fixtures cannot break pathing.** Routes are fixed, so nothing can wall a lane
 off. The Barricade is a heavy slow that grinds down as animals push through;
-the Decoy holds nearby animals in place until they destroy it or it expires.
-Both are temporary by construction.
+the Decoy holds nearby animals in place until they destroy it. Both are
+temporary by construction — but by *use*, never by a countdown. A fixture's
+integrity is its only meter, so one deployed into a quiet lane is still at full
+strength whenever the animals finally arrive. Nothing a player buys can expire
+while they are still setting up.
 
 **Audio is synthesised.** No sample files means nothing in the repository can
 be anyone else's audio, and the whole game is a few hundred kilobytes of code.
@@ -205,6 +208,15 @@ browser from an empty save, after the integrity pass:
 | After a page reload | Amber, stars and unlocks all intact |
 | Console errors | 0 |
 
+Checked again in the browser for v1.7, reproducing the report: two Decoy
+Beacons deployed during the build phase of Research Outpost, then left alone.
+At 18 seconds of simulation — past the 16-second lifetime that used to kill
+them, with nothing yet on the map — both still read 100% condition in the
+inspector. They began losing condition only once wave 1 arrived and they had
+animals to hold. The Armory card for a fixture now reads its integrity (420 for
+the Decoy, "Permanent" for the Shock Fence and Supply Cache) where it used to
+read a lifetime.
+
 ---
 
 ## Balance after the timing fix
@@ -245,6 +257,50 @@ rather than a reaction to two bot runs.
 ---
 
 ## Changelog
+
+**v1.7 — fixtures are spent, not timed**
+
+Reported from play: two Decoy Beacons deployed as a test were both dead before
+the wave they had been bought for was even launched.
+
+The cause was a fixture lifetime. `decoyBeacon` carried `durationMs: 16000`, and
+`FixtureUnit` turned that into an `expiresAt` stamped at the moment of
+deployment. The build phase between waves is longer than sixteen seconds, so a
+beacon placed while setting up had spent its whole life before an animal was on
+the map. The condition bar drained on a clock, which is what the report
+described as losing health over time, and there was nothing the player could do
+about it short of deploying mid-wave.
+
+- **No fixture is on a countdown any more.** `durationMs` is gone from
+  `FixtureDef`, `expiresAt` is gone from `FixtureUnit`, and the expiry branch is
+  gone from `updateFixtures`. Integrity is a fixture's only life meter, so
+  `condition()` no longer takes a time at all — an untouched fixture reads full
+  for the whole match however long it waits.
+- **The Decoy is now consumed the way the Barricade is.** It loses integrity
+  only to the animals it is actually holding, which is the drain that was
+  already there: roughly 4.7/s per compsognathus up to 19.5/s per carnotaurus.
+  Measured across realistic groups, 420 integrity buys six to ten seconds of
+  holding a group, against a nominal sixteen before — but sixteen *from
+  deployment*, which in practice was often zero. Integrity was left at 420: this
+  changes what spends a beacon, not how much beacon there is to spend. Steadfast
+  animals still ignore it, and so still cannot wear it down.
+- **The Armory's "Lifetime" stat is now "Integrity",** because lifetime was the
+  field that no longer exists and integrity is the number that decides when a
+  fixture goes.
+- **`tests/fixtures.test.ts` is new** (11 cases): an idle decoy holds full
+  integrity across 180 seconds of simulation — three minutes, far more than any
+  build phase — the same for a barricade, no wear from animals that are on the
+  map but out of range, wear that scales with how much is held, release of
+  everything held when it finally goes, and no wear at all on the two fixtures
+  with zero integrity. The idle case was confirmed to fail against the old
+  timer before the fix was kept.
+- **`simulationTiming` lost its fixture-expiry probe and gained a real one.**
+  It asserted that lifetimes completed identically at 1x/2x/3x and not at all
+  while paused; with lifetimes gone that would have guarded nothing, so the
+  fixture in that harness is now a Supply Cache and the assertion follows its
+  `nextSupplyAt`, which is a deadline the game still has.
+
+---
 
 **v1.6 — Ted, and the first defender that moves**
 

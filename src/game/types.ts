@@ -315,10 +315,13 @@ export interface FixtureDef {
   footprint: number;
   /** Effect radius (aura / decoy pull / fence width). */
   radius: number;
-  /** Structures wear out; 0 means it never expires from damage. */
+  /**
+   * How much punishment the structure absorbs before it is destroyed; 0 means
+   * it cannot be worn out at all. This is a fixture's only life meter —
+   * fixtures are never on a countdown, so one deployed into a quiet lane keeps
+   * its full integrity however long it waits there.
+   */
   integrity: number;
-  /** Lifetime in ms; 0 means permanent for the match. */
-  durationMs: number;
   /** Damage per second dealt to anything inside the field. */
   dps?: number;
   slow?: SlowSpec;

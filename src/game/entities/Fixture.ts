@@ -11,7 +11,6 @@ export class FixtureUnit {
   readonly y: number;
   integrity: number;
   readonly maxIntegrity: number;
-  expiresAt: number;
   nextSupplyAt = 0;
   alive = true;
   invested: number;
@@ -23,18 +22,19 @@ export class FixtureUnit {
     this.y = y;
     this.maxIntegrity = def.integrity;
     this.integrity = def.integrity;
-    this.expiresAt = def.durationMs > 0 ? now + def.durationMs : Infinity;
     this.nextSupplyAt = def.supplyTickMs ? now + def.supplyTickMs : Infinity;
     this.invested = def.cost;
     this.sprite = scene.add.image(x, y, fixtureTextureKey(def.id)).setDepth(DEPTH.fixture);
   }
 
-  /** 0..1 remaining life, whichever of integrity or duration is shorter. */
-  condition(now: number): number {
-    const byIntegrity = this.maxIntegrity > 0 ? this.integrity / this.maxIntegrity : 1;
-    const byTime =
-      this.expiresAt === Infinity ? 1 : Math.max(0, (this.expiresAt - now) / this.def.durationMs);
-    return Math.min(byIntegrity, byTime);
+  /**
+   * 0..1 remaining life. Integrity is the whole story: a fixture only ever
+   * loses condition to the animals working on it, never to the passage of
+   * time, so an untouched one reads full for the entire match.
+   */
+  condition(): number {
+    if (this.maxIntegrity <= 0) return 1;
+    return Math.max(0, this.integrity / this.maxIntegrity);
   }
 
   damage(amount: number): void {

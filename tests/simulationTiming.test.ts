@@ -58,7 +58,6 @@ interface RunOutcome {
   stunEndedAt: number | null;
   sprintStarts: number;
   cooldownReadyAt: number | null;
-  fixtureAliveAt: number | null;
   supplyTicks: number;
 }
 
@@ -88,9 +87,10 @@ function run(options: RunOptions): RunOutcome {
   dino.spawn(species, TIERS.green, path, 0, 1, clock.now);
 
   const unit = new DefenderUnit(scene, 'u1', RANGER, 400, 400);
-  const fixture = new FixtureUnit(scene, 'f1', FIXTURES.find((f) => f.id === 'decoyBeacon')!, 500, 500, clock.now);
+  // A fixture's only recurring deadline, read off the live entity: fixtures
+  // are never on a lifetime countdown, so this is the fixture clock to guard.
   const cache = FIXTURES.find((f) => f.id === 'supplyCache')!;
-  let nextSupplyAt = cache.supplyTickMs ?? 5000;
+  const fixture = new FixtureUnit(scene, 'f1', cache, 500, 500, clock.now);
 
   const hero = HEROES[0];
   const abilityReadyAt = hero.ability.cooldownMs;
@@ -105,7 +105,6 @@ function run(options: RunOptions): RunOutcome {
     stunEndedAt: null,
     sprintStarts: 0,
     cooldownReadyAt: null,
-    fixtureAliveAt: null,
     supplyTicks: 0,
   };
 
@@ -156,10 +155,9 @@ function run(options: RunOptions): RunOutcome {
     if (now < dino.stunUntil) wasStunned = true;
 
     if (outcome.cooldownReadyAt === null && now >= abilityReadyAt) outcome.cooldownReadyAt = now;
-    if (outcome.fixtureAliveAt === null && now > fixture.expiresAt) outcome.fixtureAliveAt = now;
-    if (now >= nextSupplyAt) {
+    if (now >= fixture.nextSupplyAt) {
       outcome.supplyTicks++;
-      nextSupplyAt = now + (cache.supplyTickMs ?? 5000);
+      fixture.nextSupplyAt = now + (cache.supplyTickMs ?? 5000);
     }
   }
 
@@ -254,17 +252,15 @@ describe('game speed runs the same simulation faster', () => {
     for (const o of outcomes) expect(o.sprintStarts).toBe(base.sprintStarts);
   });
 
-  it('completes hero cooldowns and fixture lifetimes at the same moment', () => {
+  it('completes hero cooldowns and fixture supply ticks at the same moment', () => {
     const outcomes = cases.map((c) =>
       run({ ...c, simDurationMs: 40_000, speciesId: 'compsognathus' }),
     );
     const [base] = outcomes;
     expect(base.cooldownReadyAt).not.toBeNull();
-    expect(base.fixtureAliveAt).not.toBeNull();
     expect(base.supplyTicks).toBeGreaterThan(4);
     for (const o of outcomes) {
       expect(o.cooldownReadyAt).toBe(base.cooldownReadyAt);
-      expect(o.fixtureAliveAt).toBe(base.fixtureAliveAt);
       expect(o.supplyTicks).toBe(base.supplyTicks);
     }
   });
@@ -328,7 +324,6 @@ describe('pause freezes the authoritative clock', () => {
     expect(frozen.slowEndedAt).toBeNull();
     expect(frozen.stunEndedAt).toBeNull();
     expect(frozen.cooldownReadyAt).toBeNull();
-    expect(frozen.fixtureAliveAt).toBeNull();
     expect(frozen.supplyTicks).toBe(0);
   });
 

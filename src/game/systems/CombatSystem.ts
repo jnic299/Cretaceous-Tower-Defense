@@ -769,10 +769,9 @@ export class CombatSystem {
   private updateFixtures(now: number, deltaMs: number): void {
     for (const fixture of this.fixtures) {
       if (!fixture.alive) continue;
-      if (now > fixture.expiresAt) {
-        fixture.alive = false;
-        continue;
-      }
+      // No fixture is on a countdown, so nothing here reads the clock to decide
+      // whether one is still standing: a fixture is spent only by the work the
+      // cases below do, which is why an idle one survives indefinitely.
       const near = this.deps.grid.queryCircle(fixture.x, fixture.y, fixture.def.radius, this.scratch);
       if (near.length === 0) continue;
 

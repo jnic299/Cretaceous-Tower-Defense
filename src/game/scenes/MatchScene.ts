@@ -1196,7 +1196,7 @@ export class MatchScene extends Phaser.Scene {
 
     // Fixture condition bars.
     for (const f of this.fixtures) {
-      const cond = f.condition(this.clock.now);
+      const cond = f.condition();
       if (cond >= 0.999) continue;
       const w = 34;
       const x = f.x - w / 2;
@@ -1300,7 +1300,7 @@ export class MatchScene extends Phaser.Scene {
         canAffordUpgrade: false,
         sellValue: sel.sellValue,
         buffed: false,
-        condition: sel.condition(this.clock.now),
+        condition: sel.condition(),
       };
     }
 

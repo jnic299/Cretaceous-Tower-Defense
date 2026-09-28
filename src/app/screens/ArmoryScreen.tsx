@@ -105,7 +105,7 @@ export function ArmoryScreen({ onBack }: { onBack: () => void }) {
                       <Stat label="Cost" value={`${f.cost} Supply`} />
                       <Stat label="Radius" value={f.radius} />
                       <Stat label="Damage" value={f.dps ? `${f.dps}/s` : '—'} />
-                      <Stat label="Lifetime" value={f.durationMs ? `${f.durationMs / 1000}s` : 'Permanent'} />
+                      <Stat label="Integrity" value={f.integrity ? f.integrity : 'Permanent'} />
                     </>
                   ) : (
                     <>

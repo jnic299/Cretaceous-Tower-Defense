@@ -153,7 +153,7 @@ keeps running while the game is paused. Gameplay therefore does not use it.
 scaled simulation delta, so one second of simulation means the same thing at
 every speed and a pause costs exactly zero of it. Every gameplay deadline reads
 from it — attack cooldowns, burn, slow, stun, sprint cadence, aura refreshes,
-fixture lifetimes, hero cooldowns, wave scheduling — and gameplay callbacks
+fixture Supply ticks, hero cooldowns, wave scheduling — and gameplay callbacks
 that need a delay (the Skyhook Strike's strafing run) are queued on it rather
 than on a Phaser timer, so they obey pause and speed and are dropped when a
 match ends.
