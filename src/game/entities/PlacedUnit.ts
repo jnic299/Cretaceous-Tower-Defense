@@ -5,6 +5,7 @@ import { unitBaseKey, unitTopKey } from '../art/keys';
 import { shotIntervalMs } from '../systems/combatMath';
 import { DEPTH } from '../depth';
 import { angleDelta } from '../../utils/geometry';
+import { samplePathAt, type PathRuntime } from '../systems/MapGeometry';
 
 /** How fast a unit's weapon swings onto a new target, in radians/sec. */
 const TURN_RATE = 9;
@@ -48,6 +49,15 @@ export abstract class PlacedUnit {
   abstract get attack(): AttackSpec;
   abstract get isMachine(): boolean;
 
+  /**
+   * True for units that fly a route rather than holding a position. Their
+   * airframe points along travel, so the combat loop must not swing it onto
+   * a target, and they are not blocked by — nor do they block — ground works.
+   */
+  get airborne(): boolean {
+    return false;
+  }
+
   get effectiveRange(): number {
     return this.range * this.buffs.range;
   }
@@ -85,6 +95,9 @@ export abstract class PlacedUnit {
 
   /** Small recoil kick, applied every time the unit fires. */
   recoil(scene: Phaser.Scene, amount = 3): void {
+    // A moving unit repositions its sprite every frame, so a tween back to
+    // where it fired from would fight that and jitter. Aircraft do not kick.
+    if (this.airborne) return;
     const ox = this.x - Math.cos(this.facing) * amount;
     const oy = this.y - Math.sin(this.facing) * amount;
     this.top.setPosition(ox, oy);
@@ -119,12 +132,78 @@ export class DefenderUnit extends PlacedUnit {
   readonly def: DefenderDef;
   targetMode: TargetMode;
 
+  /** The route this unit patrols, once docked onto one at deploy time. */
+  private patrolPath: PathRuntime | null = null;
+  /** The on-screen stretch of that route the beat is confined to. */
+  private patrolFrom = 0;
+  private patrolTo = 0;
+  private patrolProgress = 0;
+  /** -1 runs toward the start of the route, +1 back toward the objective. */
+  private patrolDir: -1 | 1 = -1;
+  /** Simulation time the aircraft is done hanging at the end of its beat. */
+  private turnUntil = 0;
+
   constructor(scene: Phaser.Scene, id: string, def: DefenderDef, x: number, y: number) {
     super(scene, id, def.id, x, y);
     this.def = def;
     this.targetMode = def.defaultTargeting;
     this.invested = def.levels[0].cost;
     this.facing = -Math.PI / 2;
+    this.top.rotation = this.facing;
+  }
+
+  override get airborne(): boolean {
+    return this.def.patrol !== undefined;
+  }
+
+  /**
+   * Docks the unit onto the route it was deployed over. It starts its beat
+   * heading for the *start* of the route — out towards where the animals come
+   * from — and turns back towards the objective when it gets there.
+   */
+  startPatrol(path: PathRuntime, progress: number, span?: { from: number; to: number }): void {
+    this.patrolPath = path;
+    this.patrolFrom = span?.from ?? 0;
+    this.patrolTo = span?.to ?? path.length;
+    this.patrolProgress = Math.min(Math.max(progress, this.patrolFrom), this.patrolTo);
+    this.patrolDir = -1;
+    this.turnUntil = 0;
+    const sample = samplePathAt(path, this.patrolProgress);
+    this.moveTo(sample.x, sample.y);
+    this.faceAlong(sample.angle);
+  }
+
+  /**
+   * Advances the beat. Driven off the simulation clock like every other
+   * gameplay deadline, so pause freezes the aircraft and 2x/3x fly it faster
+   * rather than differently.
+   */
+  updatePatrol(now: number, deltaMs: number): void {
+    const patrol = this.def.patrol;
+    const path = this.patrolPath;
+    if (!patrol || !path) return;
+
+    if (now < this.turnUntil) return;
+
+    this.patrolProgress += this.patrolDir * ((patrol.speed * deltaMs) / 1000);
+    if (this.patrolProgress <= this.patrolFrom) {
+      this.patrolProgress = this.patrolFrom;
+      this.patrolDir = 1;
+      this.turnUntil = now + patrol.turnMs;
+    } else if (this.patrolProgress >= this.patrolTo) {
+      this.patrolProgress = this.patrolTo;
+      this.patrolDir = -1;
+      this.turnUntil = now + patrol.turnMs;
+    }
+
+    const sample = samplePathAt(path, this.patrolProgress);
+    this.moveTo(sample.x, sample.y);
+    this.faceAlong(sample.angle);
+  }
+
+  /** Points the airframe along its direction of travel. */
+  private faceAlong(pathAngle: number): void {
+    this.facing = this.patrolDir > 0 ? pathAngle : pathAngle + Math.PI;
     this.top.rotation = this.facing;
   }
 

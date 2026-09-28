@@ -223,12 +223,15 @@ export class CombatSystem {
 
     const target = unit.target;
     if (!target) {
-      // Idle sweep so units never look frozen between waves.
-      unit.top.rotation = unit.facing + Math.sin(now / 900 + unit.x) * 0.05;
+      // Idle sweep so units never look frozen between waves. An aircraft is
+      // already moving, and its airframe points along travel, so leave it be.
+      if (!unit.airborne) unit.top.rotation = unit.facing + Math.sin(now / 900 + unit.x) * 0.05;
       return;
     }
 
-    const aimed = unit.aimAt(target.x, target.y, deltaMs);
+    // An aircraft drops its charges straight down, so there is nothing to aim
+    // and swinging the airframe onto a target would fight its flight path.
+    const aimed = unit.airborne ? true : unit.aimAt(target.x, target.y, deltaMs);
     if (now < unit.nextShotAt) return;
     if (!aimed && attack.pattern !== 'radial') return;
 

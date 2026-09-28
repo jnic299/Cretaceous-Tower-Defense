@@ -34,6 +34,7 @@ survives a page refresh.
   lobbed weapons deliberately exempt
 - Uniform spatial grid rebuilt per frame for targeting, splash and chain queries
 - Five targeting modes, selectable per placement
+- Airborne patrol units that fly the route they are deployed over
 - Aura system (Field Engineer, Supply Cache) recomputed on a throttle
 - Species traits: pack, sprint, armoured, steadfast, herd, rally, boss,
   amphibious
@@ -42,7 +43,7 @@ survives a page refresh.
 **Content**
 - Four maps: Research Outpost, Delta Wetlands, Caldera Station, Fossil Canyon
 - Ten species across five durability tiers
-- Eight defenders, five turrets, four fixtures, four heroes
+- Nine defenders (one of them airborne), five turrets, four fixtures, four heroes
 - Six challenges with data-driven rule modifiers
 - 60 hand-authored waves with boss finales
 
@@ -60,7 +61,7 @@ survives a page refresh.
 - Save migration (v1 → v2) with defensive normalisation
 
 **Testing**
-- 225 written `it()` declarations, executing as 255 cases (`tests/dataIntegrity`
+- 247 written `it()` declarations, executing as 277 cases (`tests/dataIntegrity`
   parameterises 10 of them over the four maps). Run `npm test` to reproduce.
 - A committed Playwright smoke suite: 11 browser tests, `npm run test:e2e`
 
@@ -244,6 +245,74 @@ rather than a reaction to two bot runs.
 ---
 
 ## Changelog
+
+**v1.6 — Ted, and the first defender that moves**
+
+Fred's brother, and the first unit in the game that is not bolted to one
+spot. He is deployed *over* a route rather than beside one, and flies that
+route end to end for the rest of the match: out towards where the animals
+come from, turn, back towards the objective, turn, repeat. He drops
+fragmentation charges on whatever is beneath him.
+
+Everything about him is new machinery, so it is worth saying where it lives:
+
+- **`DefenderDef.patrol`** (speed, and how long the aircraft hangs at each
+  turn) is what marks a unit airborne. `DefenderUnit.airborne` is derived
+  from it, and the whole beat lives in `DefenderUnit.updatePatrol`, driven
+  from `MatchScene.updatePatrols` off the simulation clock — so pause freezes
+  him mid-air and 2x/3x fly him faster rather than differently, which the
+  tests assert directly.
+- **Placement is inverted.** `PlacementQuery.requiresPath` makes the route
+  the only legal ground and skips every terrain test, because water, lava and
+  rock are all things he flies over. The no-build wash would be exactly
+  backwards for him, so he gets his own green `routeZone` overlay showing the
+  corridors instead.
+- **Placement layers are now separate.** An aircraft neither blocks ground
+  works nor is blocked by them — otherwise the ghost would flicker for every
+  other unit as he passed overhead — but two aircraft would stack into one
+  another on the same beat, so they collide with each other. He is also
+  capped at one per operation, like Fred.
+- **The combat loop leaves his airframe alone.** His nose points along
+  travel; swinging it onto a target would fight the flight path, so
+  `updateUnit` skips the aim step for airborne units and does not gate firing
+  on it. Recoil is suppressed at the source too: a tween back to where the
+  unit fired from fights a sprite that repositions every frame.
+- **Path sampling is now shared.** `samplePathAt` and `nearestOnPath` moved
+  into `MapGeometry`, and `Dino.samplePath` was rewritten on top of the
+  former — the interpolation was about to exist in three places, and now
+  exists in one. Dinosaurs keep their lane offset on top of it.
+
+Two things the first browser run caught, both fixed: the aircraft's shadow
+overflowed its base texture and got squared off at the edge, and — the real
+one — routes deliberately start and end *off* the map so animals can walk on
+and off, so Ted flew off the left edge and hung at the spawn point out of
+sight. His beat is now clamped to `MapGeometry.visibleSpan`, the stretch of
+the route that is actually on screen, and a test flies him for 90 simulated
+seconds asserting he never leaves the playfield.
+
+Balance: 150 Supply, 360 Amber, 82 px/s along the route, and 17/25/36 damage
+in a 44/52/60 splash at 1.6/1.8/2.0 per second, with incendiary filler at
+level 3. He covers a whole route instead of one position, which is a lot of
+reach, so the per-shot numbers are modest and he can never be pointed at a
+threat — he bombs what he happens to be over. A dinosaur walking towards the
+objective and Ted flying the other way pass each other quickly; on his return
+leg he overtakes slowly and lingers. That rhythm is emergent, not scripted.
+
+Worth knowing before tuning him further: traced headlessly against a *single*
+animal he fired 12 shots in 60 seconds, against a nominal 1.6/s, because he
+is only in contact for about a second per pass. Against a wave strung out
+along the route he is in contact far more of the time. So his effective output
+is well under his printed rate by design — if he feels weak in play, the lever
+is the beat speed (linger longer) rather than the damage. There is a test
+asserting exactly that gap, so if his output ever approaches the printed rate
+it means the beat has stopped moving.
+
+The whole firing chain — acquire, fire, detonate, credit — is covered by a
+test that flies him against an animal walking the same route and lands every
+shell at its aim point, because a browser run can only sample that by luck:
+he is in contact for about a second per pass, so whether a 40-second polling
+window catches a hit is chance. In the built game he cleared the first two
+waves of Research Outpost as the only unit on the board.
 
 **v1.5 — the armour floor was a cliff**
 

@@ -172,13 +172,59 @@ describe('per-match deployment caps', () => {
     expect(evaluatePlacement(outpost, { ...base, x: 160, y: 260, atLimit: false }, []).ok).toBe(true);
   });
 
-  it('caps Fred at one per operation and leaves everyone else uncapped', () => {
-    const fred = DEFENDERS.find((d) => d.id === 'fred')!;
-    expect(fred.maxPerMatch).toBe(1);
-    for (const d of DEFENDERS) {
-      if (d.id === 'fred') continue;
-      expect(d.maxPerMatch, d.id).toBeUndefined();
+  it('caps exactly the units that are meant to be unique', () => {
+    // Fred because there is only one Fred, and Ted because a second airframe
+    // would fly the same beat and stack into the first.
+    const capped = DEFENDERS.filter((d) => d.maxPerMatch !== undefined).map((d) => d.id);
+    expect(capped.sort()).toEqual(['fred', 'ted']);
+    for (const id of capped) {
+      expect(DEFENDERS.find((d) => d.id === id)!.maxPerMatch, id).toBe(1);
     }
+  });
+});
+
+describe('placement rules — airborne', () => {
+  const air = { ...base, footprint: 24, requiresPath: true, allowOnPath: true };
+
+  it('refuses open ground, which is where every other defender belongs', () => {
+    const v = evaluatePlacement(outpost, { ...air, x: 160, y: 260 }, []);
+    expect(v.ok).toBe(false);
+    expect(v.reason).toBe('needsPath');
+  });
+
+  it('accepts the route itself', () => {
+    const waypoint = RESEARCH_OUTPOST.paths[0].waypoints[1];
+    const v = evaluatePlacement(outpost, { ...air, x: waypoint.x, y: waypoint.y }, []);
+    expect(v.ok).toBe(true);
+  });
+
+  it('flies over terrain that stops everything on the ground', () => {
+    // Caldera's route crosses ground a land unit could never stand on, and an
+    // aircraft skips the water, lava and rock tests entirely.
+    const path = CALDERA_STATION.paths[0];
+    const waypoint = path.waypoints[Math.floor(path.waypoints.length / 2)];
+    const v = evaluatePlacement(caldera, { ...air, x: waypoint.x, y: waypoint.y }, []);
+    expect(v.reason).toBe('ok');
+  });
+
+  it('still keeps its distance from the objective', () => {
+    // The route runs right up to the objective, so its far end is inside the
+    // exclusion ring even though it is a legal stretch of route.
+    const points = outpost.paths[0].points;
+    const end = points[points.length - 1];
+    expect(evaluatePlacement(outpost, { ...air, x: end.x, y: end.y }, []).reason).toBe('objective');
+  });
+
+  it('collides with another aircraft but not with ground works', () => {
+    const waypoint = RESEARCH_OUTPOST.paths[0].waypoints[1];
+    const here = { ...air, x: waypoint.x, y: waypoint.y };
+    // The caller passes only the slots of the layer being placed into, so a
+    // second airframe over the same spot is refused...
+    const taken = [{ x: waypoint.x, y: waypoint.y, radius: 24 }];
+    expect(evaluatePlacement(outpost, here, taken).reason).toBe('occupied');
+    // ...while an empty air layer leaves the route free regardless of what is
+    // parked on the ground beside it.
+    expect(evaluatePlacement(outpost, here, []).reason).toBe('ok');
   });
 });
 

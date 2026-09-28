@@ -308,6 +308,8 @@ export interface TerrainLayers {
   ground: Phaser.GameObjects.Image;
   noBuild: Phaser.GameObjects.Image;
   waterZone?: Phaser.GameObjects.Image;
+  /** Where an airborne unit may be deployed: the routes themselves. */
+  routeZone: Phaser.GameObjects.Image;
   lavaGlow?: Phaser.GameObjects.Image;
   waterGlint?: Phaser.GameObjects.Image;
   decor: Phaser.GameObjects.Image[];
@@ -339,6 +341,20 @@ export function buildTerrain(scene: Phaser.Scene, map: MapDef, geometry: MapGeom
     .setOrigin(0, 0)
     .setDepth(DEPTH.placementZone)
     .setAlpha(0.16)
+    .setVisible(false);
+
+  // Airborne units invert the rule, so they get their own overlay: the routes
+  // are the only place they can go.
+  bakeTexture(scene, `${terrainKey(map)}:routezone`, map.width, map.height, (g) => {
+    for (const path of geometry.paths) {
+      strokeCorridor(g, path.points, path.def.width + 6, 0x8de89a, 1);
+    }
+  });
+  const routeZone = scene.add
+    .image(0, 0, `${terrainKey(map)}:routezone`)
+    .setOrigin(0, 0)
+    .setDepth(DEPTH.placementZone)
+    .setAlpha(0.22)
     .setVisible(false);
 
   let waterZone: Phaser.GameObjects.Image | undefined;
@@ -492,6 +508,7 @@ export function buildTerrain(scene: Phaser.Scene, map: MapDef, geometry: MapGeom
   return {
     ground,
     noBuild,
+    routeZone,
     waterZone,
     lavaGlow,
     waterGlint,
@@ -501,6 +518,7 @@ export function buildTerrain(scene: Phaser.Scene, map: MapDef, geometry: MapGeom
     destroy() {
       ground.destroy();
       noBuild.destroy();
+      routeZone.destroy();
       waterZone?.destroy();
       lavaGlow?.destroy();
       waterGlint?.destroy();

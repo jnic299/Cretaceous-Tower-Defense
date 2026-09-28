@@ -314,6 +314,7 @@ export class MatchScene extends Phaser.Scene {
       this.elapsed += dt;
       this.grid.rebuild(this.dinos);
       this.updateDinos(now, dt);
+      this.updatePatrols(now, dt);
       this.combat.update(now, dt);
       this.projectiles.update(dt);
       this.updateFixtures(now, dt);
@@ -346,12 +347,22 @@ export class MatchScene extends Phaser.Scene {
       enemiesAlive: this.dinos.length,
       placements: this.defenders.length + this.fixtures.length + (this.hero ? 1 : 0),
       ended: this.ended,
+      patrols: this.defenders
+        .filter((d) => d.airborne)
+        .map((d) => ({ x: Math.round(d.x), y: Math.round(d.y), damage: Math.round(d.damageDealt) })),
     };
   }
 
   /** True when no simulation time should pass: player pause or an open menu. */
   private get frozen(): boolean {
     return this.paused || this.menuOpen;
+  }
+
+  /** Flies every airborne defender along its beat. */
+  private updatePatrols(now: number, dt: number): void {
+    for (const unit of this.defenders) {
+      if (unit.airborne) unit.updatePatrol(now, dt);
+    }
   }
 
   private updateDinos(now: number, dt: number): void {
@@ -524,12 +535,20 @@ export class MatchScene extends Phaser.Scene {
   /* Placement                                                           */
   /* ------------------------------------------------------------------ */
 
-  private occupiedSlots(exclude?: unknown): OccupiedSlot[] {
+  /**
+   * What the thing being placed has to keep clear of. Air and ground are
+   * separate layers: an aircraft flies over every ground work (and must not
+   * make placement flicker as it passes overhead), but two aircraft would
+   * stack into one another, so they only collide with each other.
+   */
+  private occupiedSlots(exclude?: unknown, forAir = false): OccupiedSlot[] {
     const slots: OccupiedSlot[] = [];
     for (const d of this.defenders) {
-      if (d === exclude) continue;
+      if (d === exclude || d.airborne !== forAir) continue;
       slots.push({ x: d.x, y: d.y, radius: d.def.footprint });
     }
+    if (forAir) return slots;
+
     for (const f of this.fixtures) {
       if (f === exclude) continue;
       slots.push({ x: f.x, y: f.y, radius: f.def.footprint });
@@ -566,6 +585,7 @@ export class MatchScene extends Phaser.Scene {
     if (!def) {
       this.terrain.noBuild.setVisible(false);
       this.terrain.waterZone?.setVisible(false);
+      this.terrain.routeZone?.setVisible(false);
       this.ghostRange?.clear();
       return;
     }
@@ -577,8 +597,10 @@ export class MatchScene extends Phaser.Scene {
     this.ghost = this.add.image(0, 0, texture).setDepth(DEPTH.ghost).setAlpha(0.72);
 
     const wantsWater = 'terrain' in def && def.terrain === 'water';
-    this.terrain.noBuild.setVisible(!wantsWater);
+    const wantsRoute = 'patrol' in def && (def as DefenderDef).patrol !== undefined;
+    this.terrain.noBuild.setVisible(!wantsWater && !wantsRoute);
     this.terrain.waterZone?.setVisible(wantsWater);
+    this.terrain.routeZone?.setVisible(wantsRoute);
   }
 
   private updateGhost(): void {
@@ -593,6 +615,7 @@ export class MatchScene extends Phaser.Scene {
     const footprint = def.footprint;
     const cost = isMove ? 0 : isHeroCard ? (def as HeroDef).deployCost : (def as PlaceableDef).cost;
     const fixture = !isHeroCard && (def as PlaceableDef).category === 'fixture';
+    const air = !isHeroCard && (def as DefenderDef).patrol !== undefined;
 
     this.lastVerdict = evaluatePlacement(
       this.geometry,
@@ -601,13 +624,14 @@ export class MatchScene extends Phaser.Scene {
         y,
         footprint,
         terrain: def.terrain,
-        allowOnPath: fixture,
+        allowOnPath: fixture || air,
         cost,
         supply: this.economy.supply,
         permitted: isHeroCard || !this.isCardLocked(this.activeCardId),
         atLimit: !isHeroCard && this.isAtDeployLimit(def as PlaceableDef),
+        requiresPath: air,
       },
-      this.occupiedSlots(isMove ? this.hero : undefined),
+      this.occupiedSlots(isMove ? this.hero : undefined, air),
     );
 
     const ok = this.lastVerdict.ok;
@@ -694,6 +718,14 @@ export class MatchScene extends Phaser.Scene {
       this.fixtures.push(fixture);
     } else {
       const unit = new DefenderUnit(this, `u-${++unitSeq}`, placeable as DefenderDef, x, y);
+      // An airborne unit docks onto the route it was dropped over and flies
+      // that route for the rest of the match.
+      if (unit.airborne) {
+        const route = this.geometry.nearestPath(x, y);
+        if (route) {
+          unit.startPatrol(route.path, route.progress, this.geometry.visibleSpan(route.path, unit.def.footprint));
+        }
+      }
       this.defenders.push(unit);
       if (this.config.tutorial && this.defenders.length === 1) this.advanceTutorial('firstPlacement');
       if (this.config.tutorial && this.defenders.length === 2) this.advanceTutorial('range');

@@ -81,6 +81,19 @@ function drawMachineBase(g: Phaser.GameObjects.Graphics, cx: number, cy: number,
   }
 }
 
+/**
+ * An aircraft has no ground works — its "base" layer is the shadow it casts,
+ * thrown down and to the side so the airframe above it reads as airborne.
+ */
+function drawAirBase(g: Phaser.GameObjects.Graphics, cx: number, cy: number, _art: UnitArtSpec, level: number): void {
+  // The base texture only reaches ~32 local units from centre, so the offset
+  // shadow has to stay inside that or it gets squared off at the edge.
+  g.fillStyle(0x000000, 0.1);
+  g.fillEllipse(cx + 8, cy + 9, 44 + level * 2, 38 + level * 2);
+  g.fillStyle(0x000000, 0.22);
+  g.fillEllipse(cx + 8, cy + 9, 28, 22);
+}
+
 function drawVehicleBase(g: Phaser.GameObjects.Graphics, cx: number, cy: number, art: UnitArtSpec, level: number): void {
   g.fillStyle(0x000000, 0.2);
   g.fillEllipse(cx + 2, cy + 4, 56, 40);
@@ -411,6 +424,68 @@ function drawWeapon(
       }
       break;
     }
+    case 'rotor': {
+      // Light helicopter seen from above, nose along +x.
+      // Tail boom and rotor first, so the cabin sits on top of them.
+      panel(g, x - 30, y - 2.2, 24, 4.4, 2, shade(m, -0.1), mo, 1.4);
+      panel(g, x - 34, y - 7, 5, 14, 2, shade(m, -0.2), mo, 1.2);
+      g.lineStyle(1.6, shade(m, 0.2), 0.9);
+      g.lineBetween(x - 31.5, y - 6, x - 31.5, y + 6);
+
+      // Skids.
+      for (const sgn of [-1, 1]) {
+        panel(g, x - 14, y + sgn * 12 - 1.4, 26, 2.8, 1.2, shade(mo, 0.25), mo, 1);
+        g.lineStyle(1.4, shade(m, -0.3), 1);
+        g.lineBetween(x - 6, y + sgn * 5, x - 6, y + sgn * 11);
+        g.lineBetween(x + 6, y + sgn * 5, x + 6, y + sgn * 11);
+      }
+
+      // Cabin: a teardrop, blunt at the nose.
+      poly(
+        g,
+        ribbon([
+          { x: x - 9, y, w: 8 },
+          { x: x + 2, y, w: 11 },
+          { x: x + 13, y, w: 8.5 },
+          { x: x + 19, y, w: 4 },
+        ]),
+        art.body,
+        outline(art.body),
+        2.2,
+      );
+      // Canopy.
+      g.fillStyle(0x9be8ff, 0.85);
+      g.fillEllipse(x + 12, y, 13, 11);
+      g.lineStyle(1.4, outline(art.body), 0.9);
+      g.strokeEllipse(x + 12, y, 13, 11);
+      // Hazard stripe down the flank, the family colour.
+      g.fillStyle(acc, 0.95);
+      g.fillRect(x - 8, y - 2, 14, 4);
+
+      // Ordnance pylons: one charge per level, slung under the cabin.
+      for (let i = 0; i <= L; i++) {
+        for (const sgn of [-1, 1]) {
+          g.fillStyle(shade(acc, -0.25), 1);
+          g.fillCircle(x - 2 + i * 7, y + sgn * 8, 2.6);
+        }
+      }
+
+      // Rotor disc over everything: a wash plus two blurred blades.
+      g.fillStyle(0xdfeaf2, 0.1);
+      g.fillCircle(x, y, 40);
+      g.lineStyle(1.2, 0xdfeaf2, 0.22);
+      g.strokeCircle(x, y, 40);
+      for (const a of [0.35, 0.35 + Math.PI / 2]) {
+        g.lineStyle(3.4, 0xe8f1f6, 0.5);
+        g.lineBetween(x - Math.cos(a) * 39, y - Math.sin(a) * 39, x + Math.cos(a) * 39, y + Math.sin(a) * 39);
+      }
+      // Rotor head.
+      g.fillStyle(shade(m, -0.1), 1);
+      g.fillCircle(x + 2, y, 4.2);
+      g.fillStyle(acc, 1);
+      g.fillCircle(x + 2, y, 1.8);
+      break;
+    }
     case 'exo': {
       // Powered frame: heavy pauldrons and a forearm cannon.
       panel(g, x - 14, y - 14, 26, 28, 8, art.body, outline(art.body), 2.4);
@@ -558,6 +633,7 @@ export function bakeUnitArt(scene: Phaser.Scene, id: string, art: UnitArtSpec, l
       const ly = cy / UNIT_RENDER_SCALE;
       if (art.chassis === 'human') drawHumanBase(g, lx, ly, art, level);
       else if (art.chassis === 'machine') drawMachineBase(g, lx, ly, art, level);
+      else if (art.chassis === 'air') drawAirBase(g, lx, ly, art, level);
       else drawVehicleBase(g, lx, ly, art, level);
     });
 
@@ -566,7 +642,7 @@ export function bakeUnitArt(scene: Phaser.Scene, id: string, art: UnitArtSpec, l
       const lx = cx / scale;
       const ly = cy / scale;
       if (art.chassis === 'human') drawHumanTop(g, lx, ly, art, level);
-      else if (art.chassis === 'machine') drawMachineTop(g, lx, ly, art, level);
+      else if (art.chassis === 'machine' || art.chassis === 'air') drawMachineTop(g, lx, ly, art, level);
       else drawVehicleTop(g, lx, ly, art, level);
     });
   }

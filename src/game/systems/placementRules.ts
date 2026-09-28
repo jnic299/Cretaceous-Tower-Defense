@@ -13,6 +13,7 @@ export type PlacementReason =
   | 'objective'
   | 'supply'
   | 'atLimit'
+  | 'needsPath'
   | 'restricted';
 
 export interface OccupiedSlot {
@@ -34,6 +35,11 @@ export interface PlacementQuery {
   permitted?: boolean;
   /** True when this unit's per-match cap is already spent. */
   atLimit?: boolean;
+  /**
+   * Airborne units invert the usual rule: the route is the only legal place
+   * for them, and terrain underneath is irrelevant because they fly over it.
+   */
+  requiresPath?: boolean;
 }
 
 export interface PlacementVerdict {
@@ -54,6 +60,7 @@ const VERDICTS: Record<PlacementReason, string> = {
   objective: 'Too close to the objective',
   supply: 'Not enough Supply',
   atLimit: 'Already deployed the maximum of these',
+  needsPath: 'Must be deployed over a route',
   restricted: 'Not permitted in this operation',
 };
 
@@ -79,6 +86,13 @@ export function evaluatePlacement(
   if (query.atLimit) return verdict('atLimit');
   if (!geometry.inBounds(x, y, footprint + 2)) return verdict('outOfBounds');
 
+  // An aircraft skips every terrain test — water, lava and rock are all things
+  // it flies over — and instead has to be above a route to have a beat to fly.
+  if (query.requiresPath) {
+    if (!geometry.isOnPath(x, y, 0)) return verdict('needsPath');
+    return finishShared(geometry, query, occupied);
+  }
+
   const needsWater = terrain === 'water';
 
   if (needsWater) {
@@ -97,6 +111,17 @@ export function evaluatePlacement(
   if (!query.allowOnPath && geometry.isOnPath(x, y, footprint * 0.35, needsWater ? 'land' : 'all')) {
     return verdict('onPath');
   }
+
+  return finishShared(geometry, query, occupied);
+}
+
+/** Objective clearance, overlap and affordability: the same for air and ground. */
+function finishShared(
+  geometry: MapGeometry,
+  query: PlacementQuery,
+  occupied: readonly OccupiedSlot[],
+): PlacementVerdict {
+  const { x, y, footprint } = query;
 
   const obj = geometry.def.objective;
   if (Math.hypot(x - obj.x, y - obj.y) < obj.radius + footprint * 0.5) return verdict('objective');

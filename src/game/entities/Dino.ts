@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import type { SpeciesDef, SpeciesId, TierDef, TierId } from '../types';
-import type { PathRuntime } from '../systems/MapGeometry';
+import { samplePathAt, type PathRuntime } from '../systems/MapGeometry';
 import {
   DINO_FRAMES,
   DINO_RENDER_SCALE,
@@ -235,27 +235,11 @@ export class Dino {
   }
 
   private samplePath(): { x: number; y: number; angle: number } {
-    const pts = this.path.points;
-    const cum = this.path.cumulative;
-    const d = Math.min(this.progress, this.path.length);
-
-    let lo = 0;
-    let hi = cum.length - 1;
-    while (lo < hi - 1) {
-      const mid = (lo + hi) >> 1;
-      if (cum[mid] <= d) lo = mid;
-      else hi = mid;
-    }
-    const segLen = cum[hi] - cum[lo] || 1;
-    const t = (d - cum[lo]) / segLen;
-    const p0 = pts[lo];
-    const p1 = pts[hi];
-    const angle = Math.atan2(p1.y - p0.y, p1.x - p0.x);
-    const nx = -Math.sin(angle);
-    const ny = Math.cos(angle);
+    const { x, y, angle } = samplePathAt(this.path, this.progress);
+    // Offset across the corridor so a wave reads as a herd rather than a queue.
     return {
-      x: p0.x + (p1.x - p0.x) * t + nx * this.laneOffset,
-      y: p0.y + (p1.y - p0.y) * t + ny * this.laneOffset,
+      x: x - Math.sin(angle) * this.laneOffset,
+      y: y + Math.cos(angle) * this.laneOffset,
       angle,
     };
   }

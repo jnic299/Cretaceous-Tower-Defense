@@ -259,6 +259,53 @@ function Weapon({ art }: { art: UnitArtSpec }) {
           <rect x="-26" y="-2" width="8" height="4" rx="1.6" fill={shade(art.metal, -0.15)} stroke={md} strokeWidth="1" />
         </g>
       );
+    case 'rotor':
+      return (
+        <g>
+          {/* Tail boom and fin. */}
+          <rect x="-30" y="-2.2" width="24" height="4.4" rx="2" fill={shade(art.metal, -0.1)} stroke={md} />
+          <rect x="-34" y="-7" width="5" height="14" rx="2" fill={shade(art.metal, -0.2)} stroke={md} />
+          {/* Skids. */}
+          {[-1, 1].map((sgn) => (
+            <rect
+              key={sgn}
+              x="-14"
+              y={sgn * 12 - 1.4}
+              width="26"
+              height="2.8"
+              rx="1.2"
+              fill="#3a4147"
+            />
+          ))}
+          {/* Cabin and canopy. */}
+          <path
+            d="M-9 -8 Q2 -11 13 -8.5 L19 -4 L19 4 L13 8.5 Q2 11 -9 8 Z"
+            fill={css(art.body)}
+            stroke={md}
+            strokeWidth="2"
+          />
+          <ellipse cx="12" cy="0" rx="6.5" ry="5.5" fill="#9be8ff" opacity="0.85" stroke={md} />
+          <rect x="-8" y="-2" width="14" height="4" fill={a} />
+          {/* Rotor disc. */}
+          <circle cx="0" cy="0" r="34" fill="#dfeaf2" opacity="0.1" />
+          <circle cx="0" cy="0" r="34" fill="none" stroke="#dfeaf2" strokeWidth="1.2" opacity="0.25" />
+          {[0.35, 0.35 + Math.PI / 2].map((ang) => (
+            <line
+              key={ang}
+              x1={-Math.cos(ang) * 33}
+              y1={-Math.sin(ang) * 33}
+              x2={Math.cos(ang) * 33}
+              y2={Math.sin(ang) * 33}
+              stroke="#e8f1f6"
+              strokeWidth="3"
+              opacity="0.5"
+              strokeLinecap="round"
+            />
+          ))}
+          <circle cx="2" cy="0" r="4.2" fill={shade(art.metal, -0.1)} />
+          <circle cx="2" cy="0" r="1.8" fill={a} />
+        </g>
+      );
     default:
       return null;
   }
@@ -284,7 +331,12 @@ export function UnitEmblem({ art, size = 92, className, label }: Props) {
       aria-label={label ?? 'Unit'}
       style={{ overflow: 'visible' }}
     >
-      <ellipse cx="2" cy="4" rx="34" ry="26" fill="rgba(0,0,0,0.35)" />
+      {/* An aircraft throws its shadow aside instead of sitting on a pad. */}
+      {art.chassis === 'air' ? (
+        <ellipse cx="13" cy="15" rx="30" ry="23" fill="rgba(0,0,0,0.3)" />
+      ) : (
+        <ellipse cx="2" cy="4" rx="34" ry="26" fill="rgba(0,0,0,0.35)" />
+      )}
       {human && (
         <g>
           {Array.from({ length: 7 }, (_, i) => {

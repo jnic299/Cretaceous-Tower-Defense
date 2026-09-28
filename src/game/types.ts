@@ -197,12 +197,25 @@ export interface UnitArtSpec {
     | 'tank'
     | 'rifle'
     | 'exo'
-    | 'beacon';
-  /** Machines get a plated base instead of a human silhouette. */
-  chassis: 'human' | 'machine' | 'vehicle';
+    | 'beacon'
+    | 'rotor';
+  /** Machines get a plated base instead of a human silhouette; `air` flies. */
+  chassis: 'human' | 'machine' | 'vehicle' | 'air';
   /** Optional headgear flourish for humans. */
   hat?: 'cap' | 'helmet' | 'hood' | 'visor' | 'none';
   scale?: number;
+}
+
+/**
+ * A defender that flies a beat along the route it was deployed over, instead
+ * of holding a fixed position. It runs to the far end of the route, turns,
+ * runs back to the objective end, and repeats for the whole match.
+ */
+export interface PatrolSpec {
+  /** Along-route speed, in px/sec. */
+  speed: number;
+  /** How long the aircraft hangs at each end of the beat before turning, in ms. */
+  turnMs: number;
 }
 
 export interface DefenderDef {
@@ -226,6 +239,11 @@ export interface DefenderDef {
   targetModes: TargetMode[];
   /** Cap on how many of this unit one operation may field. Unset means no cap. */
   maxPerMatch?: number;
+  /**
+   * Set when the unit is airborne: it must be deployed *over* a route rather
+   * than beside one, and it patrols that route for the rest of the match.
+   */
+  patrol?: PatrolSpec;
   levels: [DefenderLevel, DefenderLevel, DefenderLevel];
   art: UnitArtSpec;
   /** Bullet points for the armory card. */

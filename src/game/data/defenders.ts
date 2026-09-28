@@ -255,6 +255,87 @@ export const DEFENDERS: DefenderDef[] = [
   },
 
   {
+    id: 'ted',
+    name: 'Ted',
+    title: 'Ted',
+    category: 'defender',
+    role: 'Mobile route bombardment',
+    description:
+      'Fred\u2019s brother. Took the other path out of the family and learned to fly. Runs a beat up and down one route dropping fragmentation charges on whatever is underneath him.',
+    flavor: 'The brothers do not discuss whose idea the flamethrower was.',
+    cost: 150,
+    unlockCost: 360,
+    // Airborne: deployed over a route rather than beside one, and it flies
+    // that route end to end for the rest of the match.
+    terrain: 'land',
+    patrol: { speed: 82, turnMs: 700 },
+    footprint: 24,
+    defaultTargeting: 'closest',
+    targetModes: ['closest', 'first', 'strongest'],
+    // One airframe per operation; two would stack into one another overhead.
+    maxPerMatch: 1,
+    strengths: [
+      'Covers an entire route instead of one position',
+      'Charges splash, so a packed lane takes the whole stick',
+      'Flies over water, lava and rock alike',
+    ],
+    weaknesses: [
+      'Only ever covers the one route he is flying',
+      'Cannot hold a chokepoint — he passes over it and moves on',
+      'Bombs whatever is beneath him, so he cannot be pointed at a threat',
+    ],
+    art: { body: 0x4a5f4a, accent: 0xe0592b, metal: 0x8d949c, weapon: 'rotor', chassis: 'air', scale: 1.1 },
+    levels: [
+      {
+        cost: 150,
+        range: 76,
+        damage: 17,
+        fireRate: 1.6,
+        note: 'Fragmentation charges, dropped in a short stick.',
+        attack: {
+          pattern: 'lob',
+          damageType: 'explosive',
+          projectileSpeed: 420,
+          splashRadius: 44,
+          splashFalloff: 0.5,
+          visual: 'grenade',
+        },
+      },
+      {
+        cost: 175,
+        range: 84,
+        damage: 25,
+        fireRate: 1.8,
+        note: 'Heavier charges, wider pattern.',
+        attack: {
+          pattern: 'lob',
+          damageType: 'explosive',
+          projectileSpeed: 440,
+          splashRadius: 52,
+          splashFalloff: 0.5,
+          visual: 'grenade',
+        },
+      },
+      {
+        cost: 310,
+        range: 92,
+        damage: 36,
+        fireRate: 2.0,
+        note: 'Incendiary filler — the family speciality.',
+        attack: {
+          pattern: 'lob',
+          damageType: 'explosive',
+          projectileSpeed: 460,
+          splashRadius: 60,
+          splashFalloff: 0.55,
+          burn: { dps: 12, durationMs: 2200 },
+          visual: 'grenade',
+        },
+      },
+    ],
+  },
+
+  {
     id: 'sniper',
     name: 'Sniper',
     title: 'Overwatch Marksman',

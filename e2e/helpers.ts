@@ -15,6 +15,7 @@ export interface SimState {
   enemiesAlive: number;
   placements: number;
   ended: boolean;
+  patrols: { x: number; y: number; damage: number }[];
 }
 
 /** The bridge is inert unless the page is opened with this flag. */

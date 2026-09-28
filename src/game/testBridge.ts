@@ -25,6 +25,12 @@ export interface TestSnapshot {
   enemiesAlive: number;
   placements: number;
   ended: boolean;
+  /**
+   * Airborne defenders, with where each one currently is and what it has
+   * dealt. Ted is the only unit that moves under its own power, so his beat
+   * cannot be asserted from the DOM — the canvas shows it and nothing else.
+   */
+  patrols: { x: number; y: number; damage: number }[];
 }
 
 export interface TestBridge {

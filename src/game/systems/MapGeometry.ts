@@ -35,6 +35,53 @@ export interface PathSample {
 }
 
 /**
+ * Position and heading at `distance` along a resampled path.
+ *
+ * Shared by anything that travels a route — dinosaurs walking it and Ted
+ * patrolling above it — so there is one interpolation to get right.
+ */
+export function samplePathAt(path: PathRuntime, distance: number): PathSample {
+  const pts = path.points;
+  const cum = path.cumulative;
+  if (pts.length === 0) return { x: 0, y: 0, angle: 0 };
+  if (pts.length === 1) return { x: pts[0].x, y: pts[0].y, angle: 0 };
+
+  const d = Math.min(Math.max(distance, 0), path.length);
+
+  let lo = 0;
+  let hi = cum.length - 1;
+  while (lo < hi - 1) {
+    const mid = (lo + hi) >> 1;
+    if (cum[mid] <= d) lo = mid;
+    else hi = mid;
+  }
+  const segLen = cum[hi] - cum[lo] || 1;
+  const t = (d - cum[lo]) / segLen;
+  const p0 = pts[lo];
+  const p1 = pts[hi];
+  return {
+    x: p0.x + (p1.x - p0.x) * t,
+    y: p0.y + (p1.y - p0.y) * t,
+    angle: Math.atan2(p1.y - p0.y, p1.x - p0.x),
+  };
+}
+
+/** Arc length along `path` of the vertex closest to a point, and how far off it is. */
+export function nearestOnPath(path: PathRuntime, x: number, y: number): { progress: number; distance: number } {
+  let progress = 0;
+  let bestSq = Infinity;
+  for (let i = 0; i < path.points.length; i++) {
+    const p = path.points[i];
+    const dSq = (p.x - x) ** 2 + (p.y - y) ** 2;
+    if (dSq < bestSq) {
+      bestSq = dSq;
+      progress = path.cumulative[i];
+    }
+  }
+  return { progress, distance: Math.sqrt(bestSq) };
+}
+
+/**
  * Centripetal Catmull-Rom through the authored waypoints, resampled at a
  * fixed step. Authoring stays coarse; dinosaurs walk a smooth curve rather
  * than snapping around corners.
@@ -193,6 +240,40 @@ export class MapGeometry {
       }
     }
     return false;
+  }
+
+  /**
+   * The route a point sits over, with the arc length of the closest point on
+   * it. Used to dock a patrolling unit onto the route it was deployed above.
+   */
+  nearestPath(x: number, y: number): { path: PathRuntime; progress: number; distance: number } | null {
+    let best: { path: PathRuntime; progress: number; distance: number } | null = null;
+    for (const path of this.paths) {
+      const hit = nearestOnPath(path, x, y);
+      if (!best || hit.distance < best.distance) best = { path, ...hit };
+    }
+    return best;
+  }
+
+  /**
+   * The stretch of a route that is actually on screen, as a span of arc
+   * length. Routes deliberately begin and end off the map edge so animals
+   * walk on and off it, which is fine for something following the route once
+   * — but an aircraft shuttling along it would fly off the playfield and hang
+   * there out of sight, so its beat is clamped to this instead.
+   */
+  visibleSpan(path: PathRuntime, margin = 24): { from: number; to: number } {
+    let from = -1;
+    let to = -1;
+    for (let i = 0; i < path.points.length; i++) {
+      const p = path.points[i];
+      if (!this.inBounds(p.x, p.y, margin)) continue;
+      if (from < 0) from = path.cumulative[i];
+      to = path.cumulative[i];
+    }
+    // A route entirely off screen would be a broken map; fall back to all of it.
+    if (from < 0 || to <= from) return { from: 0, to: path.length };
+    return { from, to };
   }
 
   /** Distance to the nearest travelled corridor across every route. */
